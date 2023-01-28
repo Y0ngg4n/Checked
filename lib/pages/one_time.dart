@@ -3,6 +3,7 @@ import 'package:checked/navigation.dart';
 import 'package:checked/pages/editors/one_time_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class OneTimePage extends StatefulWidget {
   final NavigationController navigationController;
@@ -75,7 +76,7 @@ class _OneTimePageState extends State<OneTimePage> {
       ));
     }
     if (items.isEmpty) {
-      return (const Center(child: Text("No Items yet")));
+      return (Center(child: Text(AppLocalizations.of(context)!.noItems)));
     }
     return ListView(
       children: items,

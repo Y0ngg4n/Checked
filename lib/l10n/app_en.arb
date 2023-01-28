@@ -1,0 +1,12 @@
+{
+    "appName": "Checked",
+    "name": "Name",
+    "description": "Description",
+    "one_time": "One-Time",
+    "recurring": "Recurring",
+    "achievements": "Achievements",
+    "stats": "Stats",
+    "noItems": "No items yet",
+    "pleaseEnterSomething": "Please enter something",
+    "invalidInput": "Invalid input"
+}

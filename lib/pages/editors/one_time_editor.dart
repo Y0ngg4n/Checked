@@ -1,9 +1,11 @@
 import 'package:checked/collections/one_time.dart';
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class OneTimeEditor extends StatefulWidget {
   Function refresh;
+
   OneTimeEditor({Key? key, required this.refresh}) : super(key: key);
 
   @override
@@ -34,12 +36,17 @@ class _OneTimeEditorState extends State<OneTimeEditor> {
     List<Widget> reminderWidgets = reminders
         .map((e) => ListTile(
               leading: const Icon(Icons.alarm),
-              title: Text("${e.day}.${e.month}.${e.year}"),
+              title: Text("${e.day}.${e.month}.${e.year} ${e.hour}:${e.minute}"),
+              trailing: IconButton(icon: Icon(Icons.delete), onPressed: (){
+                setState(() {
+                  reminders.remove(e);
+                });
+              },),
             ))
         .toList();
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Create One-Time"),
+        title: Text(AppLocalizations.of(context)!.one_time),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -47,83 +54,100 @@ class _OneTimeEditorState extends State<OneTimeEditor> {
           key: _formKey,
           child: Column(
             children: [
-              TextFormField(
-                decoration: const InputDecoration(
-                    labelText: "Name", border: OutlineInputBorder()),
-                validator: (String? text) {
-                  if (text == null || text.isEmpty) {
-                    return "Please enter a name";
-                  }
-                  _formKey.currentState!.save();
-                  return null;
-                },
-                onSaved: (String? value) {
-                  setState(() {
-                    name = value ?? "";
-                  });
-                },
-              ),
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: "Description",
-                  border: OutlineInputBorder(),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextFormField(
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.name,
+                      border: const OutlineInputBorder()),
+                  validator: (String? text) {
+                    if (text == null || text.isEmpty) {
+                      return AppLocalizations.of(context)!.pleaseEnterSomething;
+                    }
+                    _formKey.currentState!.save();
+                    return null;
+                  },
+                  onSaved: (String? value) {
+                    setState(() {
+                      name = value ?? "";
+                    });
+                  },
                 ),
-                validator: (String? text) {
-                  if (text == null || text.isEmpty) {
-                    return "Please enter a description";
-                  }
-                  _formKey.currentState!.save();
-                  return null;
-                },
-                onSaved: (String? value) {
-                  setState(() {
-                    description = value ?? "";
-                  });
-                },
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.description,
+                    border: const OutlineInputBorder(),
+                  ),
+                  validator: (String? text) {
+                    if (text == null || text.isEmpty) {
+                      return AppLocalizations.of(context)!.pleaseEnterSomething;
+                    }
+                    _formKey.currentState!.save();
+                    return null;
+                  },
+                  onSaved: (String? value) {
+                    setState(() {
+                      description = value ?? "";
+                    });
+                  },
+                ),
               ),
               Expanded(
                 child: ListView(
                   children: reminderWidgets,
                 ),
               ),
-              Container(
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Theme.of(context).backgroundColor),
-                child: IconButton(
-                    onPressed: () async {
-                      DateTime? date = await showDatePicker(
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Theme.of(context).backgroundColor),
+                  child: IconButton(
+                      onPressed: () async {
+                        DateTime? date = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            lastDate: DateTimeMaxMin.max,
+                            firstDate: DateTime.now());
+                        TimeOfDay? time = await showTimePicker(
                           context: context,
-                          initialDate: DateTime.now(),
-                          lastDate: DateTimeMaxMin.max,
-                          firstDate: DateTime.now());
-                      TimeOfDay? time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                      );
-                      if (date != null && time != null) {
-                        setState(() {
-                          reminders.add(DateTime(date.year, date.month,
-                              date.day, time.hour, time.minute));
-                        });
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text("Date or Time are invalid")));
-                      }
-                    },
-                    icon: const Icon(Icons.add)),
+                          initialTime: TimeOfDay.now(),
+                        );
+                        if (date != null && time != null) {
+                          setState(() {
+                            reminders.add(DateTime(date.year, date.month,
+                                date.day, time.hour, time.minute));
+                          });
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(
+                                  AppLocalizations.of(context)!.invalidInput)));
+                        }
+                      },
+                      icon: const Icon(Icons.add)),
+                ),
               ),
-              ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      _formKey.currentState!.save();
-                      Navigator.pop(context);
-                    }
-                    _saveIsar();
-                  },
-                  child: const Icon(
-                    Icons.save,
-                  ))
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                    ),
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        _formKey.currentState!.save();
+                        Navigator.pop(context);
+                      }
+                      _saveIsar();
+                    },
+                    child: const Icon(
+                      Icons.save,
+                    )),
+              )
             ],
           ),
         ),
@@ -135,9 +159,9 @@ class _OneTimeEditorState extends State<OneTimeEditor> {
 class DateTimeMaxMin {
   static const _numDays = 100000000;
 
-  static DateTime get min =>
-      DateTime.fromMicrosecondsSinceEpoch(0).subtract(Duration(days: _numDays));
+  static DateTime get min => DateTime.fromMicrosecondsSinceEpoch(0)
+      .subtract(const Duration(days: _numDays));
 
-  static DateTime get max =>
-      DateTime.fromMicrosecondsSinceEpoch(0).add(Duration(days: _numDays));
+  static DateTime get max => DateTime.fromMicrosecondsSinceEpoch(0)
+      .add(const Duration(days: _numDays));
 }

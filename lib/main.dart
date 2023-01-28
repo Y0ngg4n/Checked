@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'navigation.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const Checked());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class Checked extends StatelessWidget {
+  const Checked({super.key});
 
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Checked',
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(
         // This is the theme of your application.
         //
