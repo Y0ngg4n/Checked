@@ -42,9 +42,22 @@ class _OneTimePageState extends State<OneTimePage> {
     isar = Isar.getInstance("OneTime");
     isar ??= await Isar.open([OneTimeSchema], name: "OneTime");
     List<OneTime> response = await isar!.oneTimes.where().findAll();
+    _sort();
     setState(() {
       data = response;
     });
+  }
+
+  _sort() {
+    data.sort(((a, b) {
+      if (a.checked && !b.checked) {
+        return 1;
+      } else if (!a.checked && b.checked) {
+        return -1;
+      } else {
+        return a.name!.compareTo(b.name!);
+      }
+    }));
   }
 
   @override
@@ -69,9 +82,34 @@ class _OneTimePageState extends State<OneTimePage> {
           });
         },
         key: UniqueKey(),
-        child: ListTile(
-          title: Text(oneTime.name ?? ""),
-          subtitle: Text(oneTime.description ?? ""),
+        child: CheckboxListTile(
+          controlAffinity: ListTileControlAffinity.leading,
+          value: oneTime.checked,
+          onChanged: (value) async {
+            oneTime.checked = !oneTime.checked;
+            await isar!.writeTxn(() async {
+              await isar!.oneTimes.put(oneTime); // delete
+            });
+            setState(() {
+              _sort();
+            });
+          },
+          title: Text(
+            oneTime.name ?? "",
+            style: oneTime.checked
+                ? TextStyle(
+                    decoration: TextDecoration.lineThrough,
+                  )
+                : TextStyle(),
+          ),
+          subtitle: Text(
+            oneTime.description ?? "",
+            style: oneTime.checked
+                ? TextStyle(
+                    decoration: TextDecoration.lineThrough,
+                  )
+                : TextStyle(),
+          ),
         ),
       ));
     }

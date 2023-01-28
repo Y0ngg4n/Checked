@@ -16,13 +16,16 @@ class _OneTimeEditorState extends State<OneTimeEditor> {
   final _formKey = GlobalKey<FormState>();
   String name = "";
   String description = "";
+  DateTime? deadline;
   List<DateTime> reminders = [];
 
   _saveIsar() async {
     OneTime oneTime = OneTime()
       ..name = name
       ..description = description
-      ..reminders = reminders;
+      ..reminders = reminders
+      ..created = DateTime.now()
+      ..deadline = deadline;
     Isar? isar = Isar.getInstance("OneTime");
     isar ??= await Isar.open([OneTimeSchema], name: "OneTime");
     await isar.writeTxn(() async {
@@ -36,12 +39,16 @@ class _OneTimeEditorState extends State<OneTimeEditor> {
     List<Widget> reminderWidgets = reminders
         .map((e) => ListTile(
               leading: const Icon(Icons.alarm),
-              title: Text("${e.day}.${e.month}.${e.year} ${e.hour}:${e.minute}"),
-              trailing: IconButton(icon: Icon(Icons.delete), onPressed: (){
-                setState(() {
-                  reminders.remove(e);
-                });
-              },),
+              title:
+                  Text("${e.day}.${e.month}.${e.year} ${e.hour}:${e.minute}"),
+              trailing: IconButton(
+                icon: Icon(Icons.delete),
+                onPressed: () {
+                  setState(() {
+                    reminders.remove(e);
+                  });
+                },
+              ),
             ))
         .toList();
     return Scaffold(

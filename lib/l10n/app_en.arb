@@ -8,5 +8,7 @@
     "stats": "Stats",
     "noItems": "No items yet",
     "pleaseEnterSomething": "Please enter something",
-    "invalidInput": "Invalid input"
+    "invalidInput": "Invalid input",
+    "alarms": "Alarms",
+    "deadline": "Deadline"
 }

@@ -8,5 +8,7 @@
     "stats": "Statistiken",
     "noItems": "No items yet",
     "pleaseEnterSomething": "Bitte geben sie etwas ein",
-    "invalidInput": "Ungültige Eingaben"
+    "invalidInput": "Ungültige Eingaben",
+    "alarms": "Alarme",
+    "deadline": "Deadline"
 }

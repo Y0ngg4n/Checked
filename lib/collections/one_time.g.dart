@@ -22,18 +22,28 @@ const OneTimeSchema = CollectionSchema(
       name: r'checked',
       type: IsarType.bool,
     ),
-    r'description': PropertySchema(
+    r'created': PropertySchema(
       id: 1,
+      name: r'created',
+      type: IsarType.dateTime,
+    ),
+    r'deadline': PropertySchema(
+      id: 2,
+      name: r'deadline',
+      type: IsarType.dateTime,
+    ),
+    r'description': PropertySchema(
+      id: 3,
       name: r'description',
       type: IsarType.string,
     ),
     r'name': PropertySchema(
-      id: 2,
+      id: 4,
       name: r'name',
       type: IsarType.string,
     ),
     r'reminders': PropertySchema(
-      id: 3,
+      id: 5,
       name: r'reminders',
       type: IsarType.dateTimeList,
     )
@@ -86,9 +96,11 @@ void _oneTimeSerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeBool(offsets[0], object.checked);
-  writer.writeString(offsets[1], object.description);
-  writer.writeString(offsets[2], object.name);
-  writer.writeDateTimeList(offsets[3], object.reminders);
+  writer.writeDateTime(offsets[1], object.created);
+  writer.writeDateTime(offsets[2], object.deadline);
+  writer.writeString(offsets[3], object.description);
+  writer.writeString(offsets[4], object.name);
+  writer.writeDateTimeList(offsets[5], object.reminders);
 }
 
 OneTime _oneTimeDeserialize(
@@ -98,11 +110,13 @@ OneTime _oneTimeDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = OneTime();
-  object.checked = reader.readBoolOrNull(offsets[0]);
-  object.description = reader.readStringOrNull(offsets[1]);
+  object.checked = reader.readBool(offsets[0]);
+  object.created = reader.readDateTimeOrNull(offsets[1]);
+  object.deadline = reader.readDateTimeOrNull(offsets[2]);
+  object.description = reader.readStringOrNull(offsets[3]);
   object.id = id;
-  object.name = reader.readStringOrNull(offsets[2]);
-  object.reminders = reader.readDateTimeList(offsets[3]);
+  object.name = reader.readStringOrNull(offsets[4]);
+  object.reminders = reader.readDateTimeList(offsets[5]);
   return object;
 }
 
@@ -114,12 +128,16 @@ P _oneTimeDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readBoolOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 1:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 2:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 3:
+      return (reader.readStringOrNull(offset)) as P;
+    case 4:
+      return (reader.readStringOrNull(offset)) as P;
+    case 5:
       return (reader.readDateTimeList(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -215,28 +233,150 @@ extension OneTimeQueryWhere on QueryBuilder<OneTime, OneTime, QWhereClause> {
 
 extension OneTimeQueryFilter
     on QueryBuilder<OneTime, OneTime, QFilterCondition> {
-  QueryBuilder<OneTime, OneTime, QAfterFilterCondition> checkedIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'checked',
-      ));
-    });
-  }
-
-  QueryBuilder<OneTime, OneTime, QAfterFilterCondition> checkedIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'checked',
-      ));
-    });
-  }
-
   QueryBuilder<OneTime, OneTime, QAfterFilterCondition> checkedEqualTo(
-      bool? value) {
+      bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'checked',
         value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterFilterCondition> createdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'created',
+      ));
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterFilterCondition> createdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'created',
+      ));
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterFilterCondition> createdEqualTo(
+      DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'created',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterFilterCondition> createdGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'created',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterFilterCondition> createdLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'created',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterFilterCondition> createdBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'created',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterFilterCondition> deadlineIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'deadline',
+      ));
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterFilterCondition> deadlineIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'deadline',
+      ));
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterFilterCondition> deadlineEqualTo(
+      DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'deadline',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterFilterCondition> deadlineGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'deadline',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterFilterCondition> deadlineLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'deadline',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterFilterCondition> deadlineBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'deadline',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
       ));
     });
   }
@@ -762,6 +902,30 @@ extension OneTimeQuerySortBy on QueryBuilder<OneTime, OneTime, QSortBy> {
     });
   }
 
+  QueryBuilder<OneTime, OneTime, QAfterSortBy> sortByCreated() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'created', Sort.asc);
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterSortBy> sortByCreatedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'created', Sort.desc);
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterSortBy> sortByDeadline() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deadline', Sort.asc);
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterSortBy> sortByDeadlineDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deadline', Sort.desc);
+    });
+  }
+
   QueryBuilder<OneTime, OneTime, QAfterSortBy> sortByDescription() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'description', Sort.asc);
@@ -798,6 +962,30 @@ extension OneTimeQuerySortThenBy
   QueryBuilder<OneTime, OneTime, QAfterSortBy> thenByCheckedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'checked', Sort.desc);
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterSortBy> thenByCreated() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'created', Sort.asc);
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterSortBy> thenByCreatedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'created', Sort.desc);
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterSortBy> thenByDeadline() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deadline', Sort.asc);
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QAfterSortBy> thenByDeadlineDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deadline', Sort.desc);
     });
   }
 
@@ -846,6 +1034,18 @@ extension OneTimeQueryWhereDistinct
     });
   }
 
+  QueryBuilder<OneTime, OneTime, QDistinct> distinctByCreated() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'created');
+    });
+  }
+
+  QueryBuilder<OneTime, OneTime, QDistinct> distinctByDeadline() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'deadline');
+    });
+  }
+
   QueryBuilder<OneTime, OneTime, QDistinct> distinctByDescription(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -875,9 +1075,21 @@ extension OneTimeQueryProperty
     });
   }
 
-  QueryBuilder<OneTime, bool?, QQueryOperations> checkedProperty() {
+  QueryBuilder<OneTime, bool, QQueryOperations> checkedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'checked');
+    });
+  }
+
+  QueryBuilder<OneTime, DateTime?, QQueryOperations> createdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'created');
+    });
+  }
+
+  QueryBuilder<OneTime, DateTime?, QQueryOperations> deadlineProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'deadline');
     });
   }
 

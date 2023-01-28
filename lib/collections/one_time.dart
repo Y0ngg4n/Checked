@@ -8,5 +8,7 @@ class OneTime {
   String? name;
   String? description;
   List<DateTime>? reminders;
-  bool? checked;
+  DateTime? created;
+  DateTime? deadline;
+  bool checked = false;
 }
