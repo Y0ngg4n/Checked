@@ -15,5 +15,15 @@
     "subTask": "Sub-Task",
     "timeEstimation": "Time-Estimation",
     "spentTime": "Spent time",
-    "checkedTasks": "Checked Tasks"
+    "checkedTasks": "Checked Tasks",
+    "recurring": "Recurring",
+    "interval": "Interval",
+    "startDate": "Start-date",
+    "minutely": "Minutely",
+    "hourly": "Hourly",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "intervalSpace": "Interval-Space"
 }

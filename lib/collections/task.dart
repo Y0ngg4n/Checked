@@ -16,23 +16,57 @@ class Task {
   DateTime edited;
   DateTime created;
   DateTime? deadline;
+  bool recurring = false;
+  RecurringDays recurringDays;
+  int recurringIntervalCount = 1;
+  @enumerated
+  RecurringInterval interval = RecurringInterval.week;
+
+  DateTime? recurringStartDate;
+
   bool checked = false;
 
-  Task(
-      {required this.name,
-      required this.description,
-      required this.reminders,
-      required this.created,
-      required this.priority,
-      required this.subTasks,
-      required this.edited,
-      this.deadline,
-      this.estimation,
-      this.spent});
+  Task({
+    required this.name,
+    required this.description,
+    required this.reminders,
+    required this.created,
+    required this.priority,
+    required this.subTasks,
+    required this.recurringDays,
+    required this.edited,
+    this.deadline,
+    this.estimation,
+    this.spent,
+  });
 }
 
 @embedded
 class SubTask {
   String? name;
   bool checked = false;
+}
+
+@embedded
+class RecurringDays {
+  bool recurringMonday = false;
+  bool recurringTuesday = false;
+  bool recurringWednesday = false;
+  bool recurringThursday = false;
+  bool recurringFriday = false;
+  bool recurringSaturday = false;
+  bool recurringSunday = false;
+}
+
+enum RecurringInterval {
+  minute(1),
+  hour(2),
+  day(3),
+  week(4),
+  month(5),
+  year(6);
+
+  const RecurringInterval(this.interval);
+
+  final short interval;
 }

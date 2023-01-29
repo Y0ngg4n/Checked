@@ -82,11 +82,18 @@ class _TasksPageState extends State<TasksPage> {
     for (SubTask subTask in task.subTasks) {
       subTasks.add(Padding(
         padding: const EdgeInsets.fromLTRB(30, 0, 0, 0),
-        child: ListTile(
-          leading: Checkbox(
-            value: subTask.checked,
-            onChanged: (value) {},
-          ),
+        child: CheckboxListTile(
+          controlAffinity: ListTileControlAffinity.leading,
+          value: subTask.checked,
+          onChanged: (value) async {
+            subTask.checked = !subTask.checked;
+            await isar!.writeTxn(() async {
+              await isar!.tasks.put(task); // delete
+            });
+            setState(() {
+              _sort();
+            });
+          },
           title: Text(subTask.name ?? ""),
         ),
       ));
@@ -157,11 +164,11 @@ class _TasksPageState extends State<TasksPage> {
                 style: task.checked
                     ? const TextStyle(
                         decoration: TextDecoration.lineThrough,
-                      )
-                    : const TextStyle(),
+                        fontWeight: FontWeight.bold)
+                    : const TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: Text(
-                task.description ?? "",
+                ("${task.deadline != null ? "${task.deadline!.day}.${task.deadline!.month}.${task.deadline!.year} ${task.deadline!.hour}:${task.deadline!.minute} | " : ""} ${task.description ?? ""}"),
                 style: task.checked
                     ? const TextStyle(
                         decoration: TextDecoration.lineThrough,

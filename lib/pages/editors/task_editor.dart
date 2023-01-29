@@ -44,11 +44,19 @@ class _TaskEditorState extends State<TaskEditor> {
   List<SubTask> subTasks = [];
   DateTime? estimation;
   DateTime? spent;
+  DateTime? recurringStartDate;
+  bool recurring = false;
+  int recurringIntervalCount = 1;
+  RecurringInterval interval = RecurringInterval.week;
   TextEditingController nameController = TextEditingController();
   TextEditingController descriptionController = TextEditingController();
   TextEditingController deadlineController = TextEditingController();
   TextEditingController spentTimeController = TextEditingController();
   TextEditingController estimateTimeController = TextEditingController();
+  TextEditingController recurringStartDateController = TextEditingController();
+  TextEditingController recurringIntervalCounterController =
+      TextEditingController();
+  Map<RecurringInterval, String> intervalNameMapping = {};
 
   @override
   void initState() {
@@ -64,6 +72,9 @@ class _TaskEditorState extends State<TaskEditor> {
       subTasks = widget.task!.subTasks.toList(growable: true);
       estimation = widget.task!.estimation;
       spent = widget.task!.spent;
+      recurring = widget.task!.recurring;
+      recurringIntervalCount = widget.task!.recurringIntervalCount;
+      recurringStartDate = widget.task!.recurringStartDate;
     }
     nameController.text = name;
     descriptionController.text = description;
@@ -73,7 +84,26 @@ class _TaskEditorState extends State<TaskEditor> {
         estimation != null ? "${estimation!.hour}h ${estimation!.minute}m" : "";
     spentTimeController.text =
         spent != null ? "${spent!.hour}h ${spent!.minute}m" : "";
-    prioritySlider = (1 / (maxStepsPrioritySlider-1)) * (priority-1);
+    prioritySlider = (1 / (maxStepsPrioritySlider - 1)) * (priority - 1);
+    recurringIntervalCounterController.text = recurringIntervalCount.toString();
+
+    WidgetsFlutterBinding.ensureInitialized()
+        .scheduleFrameCallback((timeStamp) {
+      _mapIntervals();
+    });
+  }
+
+  _mapIntervals() {
+    setState(() {
+      intervalNameMapping = {
+        RecurringInterval.minute: AppLocalizations.of(context).minutely,
+        RecurringInterval.hour: AppLocalizations.of(context).hourly,
+        RecurringInterval.day: AppLocalizations.of(context).daily,
+        RecurringInterval.week: AppLocalizations.of(context).weekly,
+        RecurringInterval.month: AppLocalizations.of(context).monthly,
+        RecurringInterval.year: AppLocalizations.of(context).yearly,
+      };
+    });
   }
 
   bool _checkReminder(DateTime reminder) {
@@ -133,6 +163,7 @@ class _TaskEditorState extends State<TaskEditor> {
             edited: DateTime.now(),
             deadline: deadline,
             priority: priority,
+            recurringDays: RecurringDays(),
             subTasks: subTasks);
     task
       ..name = name
@@ -143,7 +174,11 @@ class _TaskEditorState extends State<TaskEditor> {
       ..priority = priority
       ..estimation = estimation
       ..spent = spent
-      ..subTasks = subTasks;
+      ..subTasks = subTasks
+      ..recurring = recurring
+      ..recurringStartDate = recurringStartDate
+      ..recurringIntervalCount = recurringIntervalCount
+      ..interval = interval;
     Isar? isar = Isar.getInstance("Task");
     isar ??= await Isar.open([TaskSchema], name: "Task");
     await isar.writeTxn(() async {
@@ -364,6 +399,106 @@ class _TaskEditorState extends State<TaskEditor> {
                       ),
                     ),
                   ],
+                ),
+              ),
+              CheckboxListTile(
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: Text(AppLocalizations.of(context).recurring),
+                  value: recurring,
+                  onChanged: (value) {
+                    setState(() {
+                      recurring = !recurring;
+                    });
+                  }),
+              Visibility(
+                visible: recurring,
+                child: Card(
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: TextFormField(
+                          readOnly: true,
+                          controller: recurringStartDateController,
+                          decoration: InputDecoration(
+                            suffixIcon: const Icon(Icons.date_range),
+                            labelText: AppLocalizations.of(context).startDate,
+                            border: const OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (recurring && (value == null || value.isEmpty)) {
+                              return AppLocalizations.of(context).pleaseEnterSomething;
+                            }
+                            return null;
+                          },
+                          onTap: () async {
+                            DateTime? response = await _askDateTime();
+                            if (response != null) {
+                              setState(() {
+                                recurringStartDate = response;
+                              });
+                              recurringStartDateController.text =
+                                  buildDateTimeText(response);
+                            }
+                          },
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: TextFormField(
+                          readOnly: false,
+                          keyboardType: TextInputType.number,
+                          controller: recurringIntervalCounterController,
+                          decoration: InputDecoration(
+                            suffixIcon: const Icon(Icons.date_range),
+                            labelText:
+                                AppLocalizations.of(context).intervalSpace,
+                            border: const OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null || int.tryParse(value!) == null) {
+                              return AppLocalizations.of(context)
+                                  .pleaseEnterSomething;
+                            }
+                          },
+                          onSaved: (String? value) {
+                            setState(() {
+                              recurringIntervalCount = int.parse(value!);
+                            });
+                          },
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              AppLocalizations.of(context).interval,
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: DropdownButton(
+                                value: interval,
+                                items: [
+                                  for (RecurringInterval item
+                                      in RecurringInterval.values)
+                                    DropdownMenuItem(
+                                        value: item,
+                                        child: Text(
+                                            intervalNameMapping[item] ?? "")),
+                                ],
+                                onChanged: (value) {
+                                  setState(() {
+                                    interval = value!;
+                                  });
+                                }),
+                          ),
+                        ],
+                      )
+                    ],
+                  ),
                 ),
               ),
               Card(

@@ -15,5 +15,15 @@
     "subTask": "Teilaufgabe",
     "timeEstimation": "Zeit-Abschätzung",
     "spentTime": "Verbrauchte Zeit",
-    "checkedTasks": "Erledigte Aufgaben"
+    "checkedTasks": "Erledigte Aufgaben",
+    "recurring": "Wiederholend",
+    "interval": "Interval",
+    "startDate": "Start-Datum",
+    "minutely": "Minütlich",
+    "hourly": "Stündlich",
+    "daily": "Täglich",
+    "weekly": "Wöchentlich",
+    "monthly": "Monatlich",
+    "yearly": "Jährlich",
+    "intervalSpace": "Interval-Abstand"
 }
