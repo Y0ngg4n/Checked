@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:isar/isar.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:collapsible/collapsible.dart';
 
 class TasksPage extends StatefulWidget {
   final NavigationController navigationController;
@@ -127,15 +126,18 @@ class _TasksPageState extends State<TasksPage> {
                   });
                 },
               ),
-              trailing: IconButton(
-                icon: subTasksVisible[task]!
-                    ? const Icon(Icons.expand_less)
-                    : const Icon(Icons.expand_more),
-                onPressed: () {
-                  setState(() {
-                    subTasksVisible[task] = !subTasksVisible[task]!;
-                  });
-                },
+              trailing: Visibility(
+                visible: subTasks.isNotEmpty,
+                child: IconButton(
+                  icon: subTasksVisible[task]!
+                      ? const Icon(Icons.expand_less)
+                      : const Icon(Icons.expand_more),
+                  onPressed: () {
+                    setState(() {
+                      subTasksVisible[task] = !subTasksVisible[task]!;
+                    });
+                  },
+                ),
               ),
               onTap: () {
                 Navigator.of(context).push(MaterialPageRoute(
