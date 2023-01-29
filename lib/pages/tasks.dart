@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:isar/isar.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:collapsible/collapsible.dart';
 
 class TasksPage extends StatefulWidget {
   final NavigationController navigationController;
@@ -23,6 +24,8 @@ class TasksPage extends StatefulWidget {
 class _TasksPageState extends State<TasksPage> {
   Isar? isar;
   List<Task> data = [];
+  bool showChecked = false;
+  Map<Task, bool> subTasksVisible = {};
 
   @override
   void initState() {
@@ -54,6 +57,7 @@ class _TasksPageState extends State<TasksPage> {
     setState(() {
       data = response;
     });
+    _subTaskMapping();
   }
 
   _sort() {
@@ -68,78 +72,134 @@ class _TasksPageState extends State<TasksPage> {
     }));
   }
 
-  @override
-  Widget build(BuildContext context) {
-    List<Widget> items = [];
+  _subTaskMapping() {
     for (Task task in data) {
-      items.add(Dismissible(
-        background: Container(
-          color: Colors.red,
-          alignment: Alignment.centerRight,
-          child: const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Icon(
-              Icons.delete,
-              color: Colors.white,
-            ),
-          ),
-        ),
-        onDismissed: (DismissDirection dismissDirection) async {
-          await isar!.writeTxn(() async {
-            await isar!.tasks.delete(task.id);
-          });
-        },
-        key: UniqueKey(),
+      subTasksVisible.putIfAbsent(task, () => false);
+    }
+  }
+
+  _getListTile(Task task) {
+    List<Widget> subTasks = [];
+    for (SubTask subTask in task.subTasks) {
+      subTasks.add(Padding(
+        padding: const EdgeInsets.fromLTRB(30, 0, 0, 0),
         child: ListTile(
           leading: Checkbox(
-            value: task.checked,
-            onChanged: (value) async {
-              task.checked = !task.checked;
-              await isar!.writeTxn(() async {
-                await isar!.tasks.put(task); // delete
-              });
-              setState(() {
-                _sort();
-              });
-            },
+            value: subTask.checked,
+            onChanged: (value) {},
           ),
-          onTap: () {
-            Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => TaskEditor(
-                      flutterLocalNotificationsPlugin:
-                          widget.flutterLocalNotificationsPlugin,
-                      refresh: () {
-                        setState(() {
-                          _loadData();
-                        });
-                      },
-                      task: task,
-                    )));
-          },
-          title: Text(
-            task.name ?? "",
-            style: task.checked
-                ? const TextStyle(
-                    decoration: TextDecoration.lineThrough,
-                  )
-                : const TextStyle(),
-          ),
-          subtitle: Text(
-            task.description ?? "",
-            style: task.checked
-                ? const TextStyle(
-                    decoration: TextDecoration.lineThrough,
-                  )
-                : const TextStyle(),
-          ),
+          title: Text(subTask.name ?? ""),
         ),
       ));
     }
-    if (items.isEmpty) {
-      return (Center(child: Text(AppLocalizations.of(context)!.noItems)));
+    return Dismissible(
+      background: Container(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        child: const Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Icon(
+            Icons.delete,
+            color: Colors.white,
+          ),
+        ),
+      ),
+      onDismissed: (DismissDirection dismissDirection) async {
+        await isar!.writeTxn(() async {
+          await isar!.tasks.delete(task.id);
+        });
+      },
+      key: UniqueKey(),
+      child: Container(
+        color: gradientColors[task.priority - 1].withAlpha(100),
+        child: Column(
+          children: [
+            ListTile(
+              leading: Checkbox(
+                value: task.checked,
+                onChanged: (value) async {
+                  task.checked = !task.checked;
+                  await isar!.writeTxn(() async {
+                    await isar!.tasks.put(task); // delete
+                  });
+                  setState(() {
+                    _sort();
+                  });
+                },
+              ),
+              trailing: IconButton(
+                icon: subTasksVisible[task]!
+                    ? const Icon(Icons.expand_less)
+                    : const Icon(Icons.expand_more),
+                onPressed: () {
+                  setState(() {
+                    subTasksVisible[task] = !subTasksVisible[task]!;
+                  });
+                },
+              ),
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => TaskEditor(
+                          flutterLocalNotificationsPlugin:
+                              widget.flutterLocalNotificationsPlugin,
+                          refresh: () {
+                            setState(() {
+                              _loadData();
+                            });
+                          },
+                          task: task,
+                        )));
+              },
+              title: Text(
+                task.name ?? "",
+                style: task.checked
+                    ? const TextStyle(
+                        decoration: TextDecoration.lineThrough,
+                      )
+                    : const TextStyle(),
+              ),
+              subtitle: Text(
+                task.description ?? "",
+                style: task.checked
+                    ? const TextStyle(
+                        decoration: TextDecoration.lineThrough,
+                      )
+                    : const TextStyle(),
+              ),
+            ),
+            Visibility(
+                visible: subTasksVisible[task]!,
+                child: Column(
+                    children: [for (Widget subTask in subTasks) subTask])),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    List<Widget> items = [];
+    for (Task task in data.where((element) => !element.checked)) {
+      items.add(_getListTile(task));
+    }
+    List<Widget> checkedItems = [];
+    for (Task task in data.where((element) => element.checked)) {
+      checkedItems.add(_getListTile(task));
+    }
+    if (items.isEmpty && checkedItems.isEmpty) {
+      return (Center(child: Text(AppLocalizations.of(context).noItems)));
     }
     return ListView(
-      children: items,
+      children: [
+        Column(
+          children: items,
+        ),
+        ExpansionTile(
+          title: Text(AppLocalizations.of(context).checkedTasks),
+          children: checkedItems,
+        ),
+      ],
     );
   }
 }

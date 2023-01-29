@@ -12,5 +12,8 @@
     "alarms": "Alarme",
     "deadline": "Deadline",
     "priority": "Priorität",
-    "subTask": "Teilaufgabe"
+    "subTask": "Teilaufgabe",
+    "timeEstimation": "Zeit-Abschätzung",
+    "spentTime": "Verbrauchte Zeit",
+    "checkedTasks": "Erledigte Aufgaben"
 }

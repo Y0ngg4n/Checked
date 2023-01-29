@@ -34,16 +34,21 @@ class TaskEditor extends StatefulWidget {
 
 class _TaskEditorState extends State<TaskEditor> {
   final _formKey = GlobalKey<FormState>();
+  final maxStepsPrioritySlider = 5;
   String name = "";
   String description = "";
   DateTime? deadline;
   List<DateTime> reminders = [];
-  int priority = 0;
+  int priority = 1;
   double prioritySlider = 0;
   List<SubTask> subTasks = [];
+  DateTime? estimation;
+  DateTime? spent;
   TextEditingController nameController = TextEditingController();
   TextEditingController descriptionController = TextEditingController();
   TextEditingController deadlineController = TextEditingController();
+  TextEditingController spentTimeController = TextEditingController();
+  TextEditingController estimateTimeController = TextEditingController();
 
   @override
   void initState() {
@@ -56,12 +61,19 @@ class _TaskEditorState extends State<TaskEditor> {
       deadline = widget.task!.deadline;
       reminders = widget.task!.reminders;
       priority = widget.task!.priority;
-      subTasks = widget.task!.subTasks;
+      subTasks = widget.task!.subTasks.toList(growable: true);
+      estimation = widget.task!.estimation;
+      spent = widget.task!.spent;
     }
     nameController.text = name;
     descriptionController.text = description;
     deadlineController.text =
         deadline != null ? buildDateTimeText(deadline!) : "";
+    estimateTimeController.text =
+        estimation != null ? "${estimation!.hour}h ${estimation!.minute}m" : "";
+    spentTimeController.text =
+        spent != null ? "${spent!.hour}h ${spent!.minute}m" : "";
+    prioritySlider = (1 / (maxStepsPrioritySlider-1)) * (priority-1);
   }
 
   bool _checkReminder(DateTime reminder) {
@@ -129,6 +141,8 @@ class _TaskEditorState extends State<TaskEditor> {
       ..deadline = deadline
       ..edited = DateTime.now()
       ..priority = priority
+      ..estimation = estimation
+      ..spent = spent
       ..subTasks = subTasks;
     Isar? isar = Isar.getInstance("Task");
     isar ??= await Isar.open([TaskSchema], name: "Task");
@@ -166,6 +180,14 @@ class _TaskEditorState extends State<TaskEditor> {
     }
   }
 
+  Future<TimeOfDay?> _askTime() async {
+    return await showTimePicker(
+      context: context,
+      initialTime:
+          TimeOfDay.fromDateTime(DateTime(DateTime.now().year, 0, 0, 1)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     List<Widget> reminderWidgets = reminders
@@ -193,7 +215,7 @@ class _TaskEditorState extends State<TaskEditor> {
             },
           ),
           title: TextFormField(
-            initialValue: e.name,
+            initialValue: e.name ?? "",
             onChanged: (String value) {
               setState(() {
                 e.name = value;
@@ -249,13 +271,6 @@ class _TaskEditorState extends State<TaskEditor> {
                     labelText: AppLocalizations.of(context).description,
                     border: const OutlineInputBorder(),
                   ),
-                  validator: (String? text) {
-                    if (text == null || text.isEmpty) {
-                      return AppLocalizations.of(context).pleaseEnterSomething;
-                    }
-                    _formKey.currentState!.save();
-                    return null;
-                  },
                   onSaved: (String? value) {
                     setState(() {
                       description = value ?? "";
@@ -286,97 +301,174 @@ class _TaskEditorState extends State<TaskEditor> {
                   },
                 ),
               ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    AppLocalizations.of(context).alarms,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                ),
-              ),
-              Card(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: reminderWidgets,
-                ),
-              ),
               Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Theme.of(context).backgroundColor),
-                  child: IconButton(
-                      onPressed: () async {
-                        DateTime? response = await _askDateTime();
-                        if (response != null) {
-                          setState(() {
-                            reminders.add(response);
-                          });
-                        }
-                      },
-                      icon: const Icon(Icons.add)),
-                ),
-              ),
-              Row(children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
-                  child: Text(AppLocalizations.of(context).priority + ":"),
-                ),
-                Expanded(
-                  child: GradientColoredSlider(
-                    value: prioritySlider.toDouble(),
-                    gradientColors: gradientColors,
-                    barWidth: 10,
-                    barSpace: 5,
-                    onChanged: (double value) {
-                      setState(() {
-                        prioritySlider = value;
-                        priority = _rangedSelectedValue(5, prioritySlider);
-                      });
-                    },
+                child: Row(children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
+                    child: Text("${AppLocalizations.of(context).priority}:"),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 0, 8, 0),
-                  child:
-                      Text(_rangedSelectedValue(5, prioritySlider).toString()),
-                )
-              ]),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    AppLocalizations.of(context).subTask,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                ),
-              ),
-              Card(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: subTaskWidgets,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Theme.of(context).backgroundColor),
-                  child: IconButton(
-                      onPressed: () {
+                  Expanded(
+                    child: GradientColoredSlider(
+                      value: prioritySlider.toDouble(),
+                      gradientColors: gradientColors,
+                      barWidth: 10,
+                      barSpace: 5,
+                      onChanged: (double value) {
                         setState(() {
-                          print("Add subtask");
-                          subTasks.add(SubTask());
+                          prioritySlider = value;
+                          priority = _rangedSelectedValue(prioritySlider);
                         });
                       },
-                      icon: const Icon(Icons.add)),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 0, 8, 0),
+                    child:
+                        Text(_rangedSelectedValue(prioritySlider).toString()),
+                  )
+                ]),
+              ),
+              Card(
+                child: Column(
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          AppLocalizations.of(context).alarms,
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                      ),
+                    ),
+                    Column(
+                      children: reminderWidgets,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Theme.of(context).backgroundColor),
+                        child: IconButton(
+                            onPressed: () async {
+                              DateTime? response = await _askDateTime();
+                              if (response != null) {
+                                setState(() {
+                                  reminders.add(response);
+                                });
+                              }
+                            },
+                            icon: const Icon(Icons.add)),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              Card(
+                child: Column(
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          AppLocalizations.of(context).subTask,
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
+                      child: Column(
+                        children: subTaskWidgets,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Theme.of(context).backgroundColor),
+                        child: IconButton(
+                            onPressed: () {
+                              setState(() {
+                                print("Add subtask");
+                                subTasks.add(SubTask());
+                              });
+                            },
+                            icon: const Icon(Icons.add)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextFormField(
+                  readOnly: true,
+                  controller: estimateTimeController,
+                  decoration: InputDecoration(
+                      suffixIcon: const Icon(Icons.abc),
+                      labelText: AppLocalizations.of(context).timeEstimation,
+                      border: const OutlineInputBorder()),
+                  validator: (String? text) {
+                    _formKey.currentState!.save();
+                    return null;
+                  },
+                  onTap: () async {
+                    TimeOfDay? response = await _askTime();
+                    if (response != null) {
+                      setState(() {
+                        estimation = DateTime(DateTime.now().year, 0, 0,
+                            response.hour, response.minute);
+
+                        estimateTimeController.text =
+                            "${response.hour}h ${response.minute}m";
+                      });
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content:
+                              Text(AppLocalizations.of(context).invalidInput)));
+                    }
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextFormField(
+                  readOnly: true,
+                  controller: spentTimeController,
+                  decoration: InputDecoration(
+                      suffixIcon: const Icon(Icons.abc),
+                      labelText: AppLocalizations.of(context).spentTime,
+                      border: const OutlineInputBorder()),
+                  validator: (String? text) {
+                    _formKey.currentState!.save();
+                    return null;
+                  },
+                  onTap: () async {
+                    TimeOfDay? response = await _askTime();
+                    if (response != null) {
+                      setState(() {
+                        spent = DateTime(DateTime.now().year, 0, 0,
+                            response.hour, response.minute);
+
+                        spentTimeController.text =
+                            "${response.hour}h ${response.minute}m";
+                      });
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content:
+                              Text(AppLocalizations.of(context).invalidInput)));
+                    }
+                  },
+                ),
+              ),
+              SizedBox(
+                height: 58,
+              )
             ],
           ),
           Align(
@@ -390,9 +482,9 @@ class _TaskEditorState extends State<TaskEditor> {
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
                       _formKey.currentState!.save();
+                      _save();
                       Navigator.pop(context);
                     }
-                    _save();
                   },
                   child: const Icon(
                     Icons.save,
@@ -408,9 +500,9 @@ class _TaskEditorState extends State<TaskEditor> {
     return "${dateTime.day}.${dateTime.month}.${dateTime.year} ${dateTime.hour}:${dateTime.minute}";
   }
 
-  int _rangedSelectedValue(int maxSteps, double value) {
-    double stepRange = 1.0 / maxSteps;
-    return (value / stepRange + 1).clamp(1, maxSteps).toInt();
+  int _rangedSelectedValue(double value) {
+    double stepRange = 1.0 / maxStepsPrioritySlider;
+    return (value / stepRange + 1).clamp(1, maxStepsPrioritySlider).toInt();
   }
 }
 

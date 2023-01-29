@@ -12,5 +12,8 @@
     "alarms": "Alarms",
     "deadline": "Deadline",
     "priority": "Priority",
-    "subTask": "Sub-Task"
+    "subTask": "Sub-Task",
+    "timeEstimation": "Time-Estimation",
+    "spentTime": "Spent time",
+    "checkedTasks": "Checked Tasks"
 }
