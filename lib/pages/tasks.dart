@@ -1,40 +1,40 @@
-import 'package:checked/collections/one_time.dart';
+import 'package:checked/collections/task.dart';
 import 'package:checked/navigation.dart';
-import 'package:checked/pages/editors/one_time_editor.dart';
+import 'package:checked/pages/editors/task_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:isar/isar.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
-class OneTimePage extends StatefulWidget {
+class TasksPage extends StatefulWidget {
   final NavigationController navigationController;
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
 
-  OneTimePage(
+  TasksPage(
       {Key? key,
       required this.navigationController,
       required this.flutterLocalNotificationsPlugin})
       : super(key: key);
 
   @override
-  State<OneTimePage> createState() => _OneTimePageState();
+  State<TasksPage> createState() => _TasksPageState();
 }
 
-class _OneTimePageState extends State<OneTimePage> {
+class _TasksPageState extends State<TasksPage> {
   Isar? isar;
-  List<OneTime> data = [];
+  List<Task> data = [];
 
   @override
   void initState() {
     super.initState();
-    widget.navigationController.onFABPressedOneTime = onFABPressed;
+    widget.navigationController.onFABPressedTasks = onFABPressed;
     _loadData();
   }
 
   void onFABPressed() {
     print("On Fab pressed");
     Navigator.of(context).push(MaterialPageRoute(
-        builder: (context) => OneTimeEditor(
+        builder: (context) => TaskEditor(
               flutterLocalNotificationsPlugin:
                   widget.flutterLocalNotificationsPlugin,
               refresh: () {
@@ -47,9 +47,9 @@ class _OneTimePageState extends State<OneTimePage> {
 
   Future<void> _loadData() async {
     print("Load Data");
-    isar = Isar.getInstance("OneTime");
-    isar ??= await Isar.open([OneTimeSchema], name: "OneTime");
-    List<OneTime> response = await isar!.oneTimes.where().findAll();
+    isar = Isar.getInstance("Task");
+    isar ??= await Isar.open([TaskSchema], name: "Task");
+    List<Task> response = await isar!.tasks.where().findAll();
     _sort();
     setState(() {
       data = response;
@@ -71,7 +71,7 @@ class _OneTimePageState extends State<OneTimePage> {
   @override
   Widget build(BuildContext context) {
     List<Widget> items = [];
-    for (OneTime oneTime in data) {
+    for (Task task in data) {
       items.add(Dismissible(
         background: Container(
           color: Colors.red,
@@ -86,17 +86,17 @@ class _OneTimePageState extends State<OneTimePage> {
         ),
         onDismissed: (DismissDirection dismissDirection) async {
           await isar!.writeTxn(() async {
-            await isar!.oneTimes.delete(oneTime.id);
+            await isar!.tasks.delete(task.id);
           });
         },
         key: UniqueKey(),
         child: ListTile(
           leading: Checkbox(
-            value: oneTime.checked,
+            value: task.checked,
             onChanged: (value) async {
-              oneTime.checked = !oneTime.checked;
+              task.checked = !task.checked;
               await isar!.writeTxn(() async {
-                await isar!.oneTimes.put(oneTime); // delete
+                await isar!.tasks.put(task); // delete
               });
               setState(() {
                 _sort();
@@ -105,7 +105,7 @@ class _OneTimePageState extends State<OneTimePage> {
           ),
           onTap: () {
             Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => OneTimeEditor(
+                builder: (context) => TaskEditor(
                       flutterLocalNotificationsPlugin:
                           widget.flutterLocalNotificationsPlugin,
                       refresh: () {
@@ -113,20 +113,20 @@ class _OneTimePageState extends State<OneTimePage> {
                           _loadData();
                         });
                       },
-                      oneTime: oneTime,
+                      task: task,
                     )));
           },
           title: Text(
-            oneTime.name ?? "",
-            style: oneTime.checked
+            task.name ?? "",
+            style: task.checked
                 ? const TextStyle(
                     decoration: TextDecoration.lineThrough,
                   )
                 : const TextStyle(),
           ),
           subtitle: Text(
-            oneTime.description ?? "",
-            style: oneTime.checked
+            task.description ?? "",
+            style: task.checked
                 ? const TextStyle(
                     decoration: TextDecoration.lineThrough,
                   )

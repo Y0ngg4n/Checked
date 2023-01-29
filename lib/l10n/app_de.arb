@@ -10,5 +10,7 @@
     "pleaseEnterSomething": "Bitte geben sie etwas ein",
     "invalidInput": "Ungültige Eingaben",
     "alarms": "Alarme",
-    "deadline": "Deadline"
+    "deadline": "Deadline",
+    "priority": "Priorität",
+    "subTask": "Teilaufgabe"
 }

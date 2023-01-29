@@ -1,9 +1,9 @@
-import 'package:checked/pages/one_time.dart';
+import 'package:checked/pages/tasks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NavigationController {
-  late void Function() onFABPressedOneTime;
+  late void Function() onFABPressedTasks;
   late void Function() onFABPressedRecurring;
   late void Function() onFABPressedAchievements;
   late void Function() onFABPressedStats;
@@ -26,7 +26,7 @@ class _NavigationState extends State<Navigation> {
   void onFABPressed() {
     switch (selectedItem) {
       case 0:
-        navigationController.onFABPressedOneTime();
+        navigationController.onFABPressedTasks();
         break;
       case 1:
         navigationController.onFABPressedRecurring();
@@ -47,7 +47,7 @@ class _NavigationState extends State<Navigation> {
     Widget body;
     switch (selectedItem) {
       case 0:
-        body = OneTimePage(
+        body = TasksPage(
           flutterLocalNotificationsPlugin:
               widget.flutterLocalNotificationsPlugin,
           navigationController: navigationController,
@@ -88,8 +88,8 @@ class _NavigationState extends State<Navigation> {
           },
           items: [
             BottomNavigationBarItem(
-                icon: const Icon(Icons.plus_one),
-                label: "One-Time",
+                icon: const Icon(Icons.check),
+                label: "Tasks",
                 backgroundColor: Theme.of(context).backgroundColor),
             BottomNavigationBarItem(
                 icon: const Icon(Icons.repeat),

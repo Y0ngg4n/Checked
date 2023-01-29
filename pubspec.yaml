@@ -42,6 +42,7 @@ dependencies:
   isar: ^3.0.5
   isar_flutter_libs: ^3.0.5
   flutter_local_notifications: ^13.0.0
+  gradient_colored_slider: ^1.0.2
 
 dev_dependencies:
   flutter_test:

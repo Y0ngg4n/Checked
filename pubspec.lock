@@ -254,6 +254,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.1.1"
+  gradient_colored_slider:
+    dependency: "direct main"
+    description:
+      name: gradient_colored_slider
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.0.2"
   graphs:
     dependency: transitive
     description:

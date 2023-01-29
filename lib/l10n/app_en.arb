@@ -10,5 +10,7 @@
     "pleaseEnterSomething": "Please enter something",
     "invalidInput": "Invalid input",
     "alarms": "Alarms",
-    "deadline": "Deadline"
+    "deadline": "Deadline",
+    "priority": "Priority",
+    "subTask": "Sub-Task"
 }
