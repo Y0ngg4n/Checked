@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="pro.obco.checked">
    <application
-        android:label="checked"
+        android:label="Checked"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
