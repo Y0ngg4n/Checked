@@ -25,5 +25,9 @@
     "weekly": "Wöchentlich",
     "monthly": "Monatlich",
     "yearly": "Jährlich",
-    "intervalSpace": "Interval-Abstand"
+    "intervalSpace": "Interval-Abstand",
+    "bevoreEvent": "Vor dem Ereignis",
+    "atDeadline": "Wenn Deadline erreicht",
+    "atEvent": "Beim Entreten des Ereignis",
+    "specificDateTime": "spezifisches Datum und Uhrzeit"
 }

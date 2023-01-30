@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 
 part 'task.g.dart';
@@ -8,7 +7,7 @@ class Task {
   Id id = Isar.autoIncrement;
   String name;
   String description;
-  List<DateTime> reminders;
+  List<DateTimeReminder> dateTimeReminders;
   int priority;
   List<SubTask> subTasks;
   DateTime? estimation;
@@ -21,15 +20,15 @@ class Task {
   int recurringIntervalCount = 1;
   @enumerated
   RecurringInterval interval = RecurringInterval.week;
-
   DateTime? recurringStartDate;
-
+  StartDateReminder startDateReminder = StartDateReminder();
+  DeadlineDateReminder deadlineDateReminder = DeadlineDateReminder();
   bool checked = false;
 
   Task({
     required this.name,
     required this.description,
-    required this.reminders,
+    required this.dateTimeReminders,
     required this.created,
     required this.priority,
     required this.subTasks,
@@ -69,4 +68,22 @@ enum RecurringInterval {
   const RecurringInterval(this.interval);
 
   final short interval;
+}
+
+@embedded
+class DateTimeReminder {
+  DateTime? dateTime;
+  int? notificationId;
+}
+
+@embedded
+class StartDateReminder {
+  bool enabled = false;
+  int? notificationId;
+}
+
+@embedded
+class DeadlineDateReminder {
+  bool enabled = false;
+  int? notificationId;
 }

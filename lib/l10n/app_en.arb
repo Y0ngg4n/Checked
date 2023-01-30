@@ -25,5 +25,9 @@
     "weekly": "Weekly",
     "monthly": "Monthly",
     "yearly": "Yearly",
-    "intervalSpace": "Interval-Space"
+    "intervalSpace": "Interval-Space",
+    "bevoreEvent": "Before the Event",
+    "atDeadline": "At Deadline",
+    "atEvent": "At Event",
+    "specificDateTime": "specific Date and Time"
 }

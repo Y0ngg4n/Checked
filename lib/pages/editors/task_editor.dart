@@ -16,6 +16,8 @@ const List<Color> gradientColors = [
   Colors.red
 ];
 
+enum AlarmType { before, dateTime, atStartDate, atDeadline }
+
 class TaskEditor extends StatefulWidget {
   Function refresh;
   Task? task;
@@ -38,7 +40,7 @@ class _TaskEditorState extends State<TaskEditor> {
   String name = "";
   String description = "";
   DateTime? deadline;
-  List<DateTime> reminders = [];
+  List<DateTimeReminder> dateTimeReminders = [];
   int priority = 1;
   double prioritySlider = 0;
   List<SubTask> subTasks = [];
@@ -47,6 +49,8 @@ class _TaskEditorState extends State<TaskEditor> {
   DateTime? recurringStartDate;
   bool recurring = false;
   int recurringIntervalCount = 1;
+  StartDateReminder startDateReminder = StartDateReminder();
+  DeadlineDateReminder deadlineDateReminder = DeadlineDateReminder();
   RecurringInterval interval = RecurringInterval.week;
   TextEditingController nameController = TextEditingController();
   TextEditingController descriptionController = TextEditingController();
@@ -67,7 +71,8 @@ class _TaskEditorState extends State<TaskEditor> {
       name = widget.task!.name;
       description = widget.task!.description;
       deadline = widget.task!.deadline;
-      reminders = widget.task!.reminders;
+      dateTimeReminders = widget.task!.dateTimeReminders.toList(growable: true);
+      print(dateTimeReminders.length);
       priority = widget.task!.priority;
       subTasks = widget.task!.subTasks.toList(growable: true);
       estimation = widget.task!.estimation;
@@ -75,6 +80,8 @@ class _TaskEditorState extends State<TaskEditor> {
       recurring = widget.task!.recurring;
       recurringIntervalCount = widget.task!.recurringIntervalCount;
       recurringStartDate = widget.task!.recurringStartDate;
+      startDateReminder = widget.task!.startDateReminder;
+      deadlineDateReminder = widget.task!.deadlineDateReminder;
     }
     nameController.text = name;
     descriptionController.text = description;
@@ -113,17 +120,18 @@ class _TaskEditorState extends State<TaskEditor> {
     return true;
   }
 
-  bool _checkReminders(DateTime reminder, List<DateTime> removeList) {
-    if (!_checkReminder(reminder)) {
+  bool _checkReminders(
+      DateTimeReminder reminder, List<DateTimeReminder> removeList) {
+    if (!_checkReminder(reminder.dateTime!)) {
       removeList.add(reminder);
       return false;
     }
     return true;
   }
 
-  _removeReminders(List<DateTime> removeList) {
-    for (DateTime removeItem in removeList) {
-      reminders.remove(removeItem);
+  _removeReminders(List<DateTimeReminder> removeList) {
+    for (DateTimeReminder removeItem in removeList) {
+      dateTimeReminders.remove(removeItem);
     }
   }
 
@@ -133,24 +141,58 @@ class _TaskEditorState extends State<TaskEditor> {
   }
 
   _createNotifications() async {
-    List<DateTime> removeList = [];
-    for (DateTime reminder in reminders) {
+    // DateTime Reminders
+    List<DateTimeReminder> removeList = [];
+    for (DateTimeReminder reminder in dateTimeReminders) {
       _checkReminders(reminder, removeList);
     }
     _removeReminders(removeList);
-    for (DateTime reminder in reminders) {
+    NotificationDetails notificationDetails = const NotificationDetails(
+        android: AndroidNotificationDetails(taskChannel, taskChannel,
+            channelDescription: 'Checked: One Time Event Notification'));
+    for (DateTimeReminder reminder in dateTimeReminders) {
       await widget.flutterLocalNotificationsPlugin.zonedSchedule(
-          UniqueKey().hashCode,
+          reminder.notificationId!,
           name,
           description,
-          tz.TZDateTime.from(reminder, tz.local),
-          const NotificationDetails(
-              android: AndroidNotificationDetails(taskChannel, taskChannel,
-                  channelDescription: 'Checked: One Time Event Notification')),
+          tz.TZDateTime.from(reminder.dateTime!, tz.local),
+          notificationDetails,
           androidAllowWhileIdle: true,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime);
     }
+
+    if (recurring && startDateReminder.enabled) {
+      RepeatInterval repeatInterval = RepeatInterval.weekly;
+      if (recurringIntervalCount == 1) {
+        switch (interval) {
+          case RecurringInterval.minute:
+            repeatInterval = RepeatInterval.everyMinute;
+            break;
+          case RecurringInterval.hour:
+            repeatInterval = RepeatInterval.hourly;
+            break;
+          case RecurringInterval.day:
+            repeatInterval = RepeatInterval.daily;
+            break;
+          case RecurringInterval.week:
+            repeatInterval = RepeatInterval.weekly;
+            break;
+          case RecurringInterval.month:
+            break;
+          case RecurringInterval.year:
+            // TODO: Handle this case.
+            break;
+        }
+        await widget.flutterLocalNotificationsPlugin.periodicallyShow(0, name,
+            description, repeatInterval, notificationDetails,
+            androidAllowWhileIdle: true);
+      }
+    }
+  }
+
+  _cancelNotification(int id) async {
+    await widget.flutterLocalNotificationsPlugin.cancel(id);
   }
 
   _saveIsar() async {
@@ -158,7 +200,7 @@ class _TaskEditorState extends State<TaskEditor> {
         Task(
             name: name,
             description: description,
-            reminders: reminders,
+            dateTimeReminders: dateTimeReminders,
             created: DateTime.now(),
             edited: DateTime.now(),
             deadline: deadline,
@@ -168,7 +210,7 @@ class _TaskEditorState extends State<TaskEditor> {
     task
       ..name = name
       ..description = description
-      ..reminders = reminders
+      ..dateTimeReminders = dateTimeReminders
       ..deadline = deadline
       ..edited = DateTime.now()
       ..priority = priority
@@ -178,6 +220,8 @@ class _TaskEditorState extends State<TaskEditor> {
       ..recurring = recurring
       ..recurringStartDate = recurringStartDate
       ..recurringIntervalCount = recurringIntervalCount
+      ..startDateReminder = startDateReminder
+      ..deadlineDateReminder = deadlineDateReminder
       ..interval = interval;
     Isar? isar = Isar.getInstance("Task");
     isar ??= await Isar.open([TaskSchema], name: "Task");
@@ -185,6 +229,29 @@ class _TaskEditorState extends State<TaskEditor> {
       await isar!.tasks.put(task); // insert & update
       widget.refresh();
     });
+  }
+
+  Future<AlarmType> _askAlarmType() async {
+    return await showDialog(
+      context: context,
+      builder: (context) {
+        return SimpleDialog(
+          children: [
+            SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, AlarmType.before),
+                child: Text(AppLocalizations.of(context).bevoreEvent)),
+            if (recurring)
+              SimpleDialogOption(
+                  onPressed: () =>
+                      Navigator.pop(context, AlarmType.atStartDate),
+                  child: Text(AppLocalizations.of(context).startDate)),
+            SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, AlarmType.dateTime),
+                child: Text(AppLocalizations.of(context).specificDateTime)),
+          ],
+        );
+      },
+    );
   }
 
   Future<DateTime?> _askDateTime() async {
@@ -225,20 +292,36 @@ class _TaskEditorState extends State<TaskEditor> {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> reminderWidgets = reminders
+    List<Widget> reminderWidgets = dateTimeReminders
         .map((e) => ListTile(
               leading: const Icon(Icons.alarm),
-              title: Text(buildDateTimeText(e)),
+              title: Text(buildDateTimeText(e.dateTime!)),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),
                 onPressed: () {
                   setState(() {
-                    reminders.remove(e);
+                    dateTimeReminders.remove(e);
+                    _cancelNotification(e.notificationId!);
                   });
                 },
               ),
             ))
         .toList();
+    if (startDateReminder!.enabled) {
+      reminderWidgets.add(ListTile(
+        leading: const Icon(Icons.alarm),
+        title: Text(AppLocalizations.of(context).startDate),
+        trailing: IconButton(
+          icon: const Icon(Icons.delete),
+          onPressed: () {
+            setState(() {
+              startDateReminder!.enabled = false;
+              _cancelNotification(startDateReminder!.notificationId!);
+            });
+          },
+        ),
+      ));
+    }
     List<Widget> subTaskWidgets = subTasks.map((e) {
       return ListTile(
           leading: Checkbox(
@@ -328,8 +411,10 @@ class _TaskEditorState extends State<TaskEditor> {
                     if (response != null) {
                       setState(() {
                         deadline = response;
-                        reminders
-                            .add(response.subtract(const Duration(hours: 1)));
+                        dateTimeReminders.add(DateTimeReminder()
+                          ..notificationId = UniqueKey().hashCode
+                          ..dateTime =
+                              response.subtract(const Duration(hours: 1)));
                       });
                       deadlineController.text = buildDateTimeText(response);
                     }
@@ -388,11 +473,30 @@ class _TaskEditorState extends State<TaskEditor> {
                             color: Theme.of(context).backgroundColor),
                         child: IconButton(
                             onPressed: () async {
-                              DateTime? response = await _askDateTime();
-                              if (response != null) {
-                                setState(() {
-                                  reminders.add(response);
-                                });
+                              AlarmType alarmType = await _askAlarmType();
+                              switch (alarmType) {
+                                case AlarmType.dateTime:
+                                  DateTime? response = await _askDateTime();
+                                  if (response != null) {
+                                    setState(() {
+                                      dateTimeReminders.add(DateTimeReminder()
+                                        ..notificationId = UniqueKey().hashCode
+                                        ..dateTime = response);
+                                    });
+                                  }
+                                  break;
+                                case AlarmType.before:
+                                  // TODO: Handle this case.
+                                  break;
+                                case AlarmType.atStartDate:
+                                  setState(() {
+                                    startDateReminder!.enabled = true;
+                                  });
+                                  // TODO: Handle this case.
+                                  break;
+                                case AlarmType.atDeadline:
+                                  // TODO: Handle this case.
+                                  break;
                               }
                             },
                             icon: const Icon(Icons.add)),
@@ -427,7 +531,8 @@ class _TaskEditorState extends State<TaskEditor> {
                           ),
                           validator: (value) {
                             if (recurring && (value == null || value.isEmpty)) {
-                              return AppLocalizations.of(context).pleaseEnterSomething;
+                              return AppLocalizations.of(context)
+                                  .pleaseEnterSomething;
                             }
                             return null;
                           },

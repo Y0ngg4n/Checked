@@ -111,6 +111,14 @@ class _TasksPageState extends State<TasksPage> {
         ),
       ),
       onDismissed: (DismissDirection dismissDirection) async {
+        for (DateTimeReminder dateTimeReminder in task.dateTimeReminders) {
+          await widget.flutterLocalNotificationsPlugin
+              .cancel(dateTimeReminder.notificationId!);
+        }
+        await widget.flutterLocalNotificationsPlugin
+            .cancel(task.startDateReminder.notificationId!);
+        await widget.flutterLocalNotificationsPlugin
+            .cancel(task.deadlineDateReminder.notificationId!);
         await isar!.writeTxn(() async {
           await isar!.tasks.delete(task.id);
         });
