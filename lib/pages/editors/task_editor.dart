@@ -93,11 +93,16 @@ class _TaskEditorState extends State<TaskEditor> {
         spent != null ? "${spent!.hour}h ${spent!.minute}m" : "";
     prioritySlider = (1 / (maxStepsPrioritySlider - 1)) * (priority - 1);
     recurringIntervalCounterController.text = recurringIntervalCount.toString();
+    recurringStartDateController.text = recurringStartDate != null
+        ? buildDateTimeText(recurringStartDate!)
+        : "";
 
     WidgetsFlutterBinding.ensureInitialized()
         .scheduleFrameCallback((timeStamp) {
       _mapIntervals();
     });
+    startDateReminder.notificationId ??= UniqueKey().hashCode;
+    deadlineDateReminder.notificationId ??= UniqueKey().hashCode;
   }
 
   _mapIntervals() {
@@ -163,30 +168,57 @@ class _TaskEditorState extends State<TaskEditor> {
     }
 
     if (recurring && startDateReminder.enabled) {
-      RepeatInterval repeatInterval = RepeatInterval.weekly;
       if (recurringIntervalCount == 1) {
-        switch (interval) {
-          case RecurringInterval.minute:
-            repeatInterval = RepeatInterval.everyMinute;
-            break;
-          case RecurringInterval.hour:
-            repeatInterval = RepeatInterval.hourly;
-            break;
-          case RecurringInterval.day:
-            repeatInterval = RepeatInterval.daily;
-            break;
-          case RecurringInterval.week:
-            repeatInterval = RepeatInterval.weekly;
-            break;
-          case RecurringInterval.month:
-            break;
-          case RecurringInterval.year:
-            // TODO: Handle this case.
-            break;
+        if (interval != RecurringInterval.minute ||
+            interval != RecurringInterval.hour) {
+          DateTimeComponents dateTimeComponent = DateTimeComponents.time;
+          switch (interval) {
+            case RecurringInterval.day:
+              dateTimeComponent = DateTimeComponents.time;
+              break;
+            case RecurringInterval.week:
+              dateTimeComponent = DateTimeComponents.dayOfWeekAndTime;
+              break;
+            case RecurringInterval.month:
+              dateTimeComponent = DateTimeComponents.dayOfMonthAndTime;
+              break;
+            case RecurringInterval.year:
+              dateTimeComponent = DateTimeComponents.dateAndTime;
+              break;
+            default:
+              dateTimeComponent = DateTimeComponents.time;
+              break;
+          }
+
+          await widget.flutterLocalNotificationsPlugin.zonedSchedule(
+              startDateReminder.notificationId!,
+              name,
+              description,
+              tz.TZDateTime.from(recurringStartDate!, tz.local),
+              notificationDetails,
+              androidAllowWhileIdle: true,
+              uiLocalNotificationDateInterpretation:
+                  UILocalNotificationDateInterpretation.absoluteTime,
+              matchDateTimeComponents: dateTimeComponent);
+        } else {
+          RepeatInterval repeatInterval = RepeatInterval.hourly;
+          switch (interval) {
+            case (RecurringInterval.minute):
+              repeatInterval = RepeatInterval.everyMinute;
+              break;
+            case (RecurringInterval.hour):
+              repeatInterval = RepeatInterval.hourly;
+              break;
+            default:
+              break;
+          }
+          await widget.flutterLocalNotificationsPlugin.periodicallyShow(
+              startDateReminder.notificationId!,
+              name,
+              description,
+              repeatInterval,
+              notificationDetails);
         }
-        await widget.flutterLocalNotificationsPlugin.periodicallyShow(0, name,
-            description, repeatInterval, notificationDetails,
-            androidAllowWhileIdle: true);
       }
     }
   }
@@ -519,60 +551,6 @@ class _TaskEditorState extends State<TaskEditor> {
                 child: Card(
                   child: Column(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextFormField(
-                          readOnly: true,
-                          controller: recurringStartDateController,
-                          decoration: InputDecoration(
-                            suffixIcon: const Icon(Icons.date_range),
-                            labelText: AppLocalizations.of(context).startDate,
-                            border: const OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            if (recurring && (value == null || value.isEmpty)) {
-                              return AppLocalizations.of(context)
-                                  .pleaseEnterSomething;
-                            }
-                            return null;
-                          },
-                          onTap: () async {
-                            DateTime? response = await _askDateTime();
-                            if (response != null) {
-                              setState(() {
-                                recurringStartDate = response;
-                              });
-                              recurringStartDateController.text =
-                                  buildDateTimeText(response);
-                            }
-                          },
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextFormField(
-                          readOnly: false,
-                          keyboardType: TextInputType.number,
-                          controller: recurringIntervalCounterController,
-                          decoration: InputDecoration(
-                            suffixIcon: const Icon(Icons.date_range),
-                            labelText:
-                                AppLocalizations.of(context).intervalSpace,
-                            border: const OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            if (value == null || int.tryParse(value!) == null) {
-                              return AppLocalizations.of(context)
-                                  .pleaseEnterSomething;
-                            }
-                          },
-                          onSaved: (String? value) {
-                            setState(() {
-                              recurringIntervalCount = int.parse(value!);
-                            });
-                          },
-                        ),
-                      ),
                       Row(
                         children: [
                           Padding(
@@ -588,11 +566,11 @@ class _TaskEditorState extends State<TaskEditor> {
                                 value: interval,
                                 items: [
                                   for (RecurringInterval item
-                                      in RecurringInterval.values)
+                                  in RecurringInterval.values)
                                     DropdownMenuItem(
                                         value: item,
                                         child: Text(
-                                            intervalNameMapping[item] ?? "")),
+                                            intervalNameMapping[item] ?? "Empty")),
                                 ],
                                 onChanged: (value) {
                                   setState(() {
@@ -601,7 +579,65 @@ class _TaskEditorState extends State<TaskEditor> {
                                 }),
                           ),
                         ],
-                      )
+                      ),
+                      Visibility(
+                        visible: !(interval == RecurringInterval.minute || interval == RecurringInterval.hour),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: TextFormField(
+                            readOnly: true,
+                            controller: recurringStartDateController,
+                            decoration: InputDecoration(
+                              suffixIcon: const Icon(Icons.date_range),
+                              labelText: AppLocalizations.of(context).startDate,
+                              border: const OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (recurring && (value == null || value.isEmpty)) {
+                                return AppLocalizations.of(context)
+                                    .pleaseEnterSomething;
+                              }
+                              return null;
+                            },
+                            onTap: () async {
+                              DateTime? response = await _askDateTime();
+                              if (response != null) {
+                                setState(() {
+                                  recurringStartDate = response;
+                                });
+                                recurringStartDateController.text =
+                                    buildDateTimeText(response);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      // Padding(
+                      //   padding: const EdgeInsets.all(8.0),
+                      //   child: TextFormField(
+                      //     readOnly: false,
+                      //     keyboardType: TextInputType.number,
+                      //     controller: recurringIntervalCounterController,
+                      //     decoration: InputDecoration(
+                      //       suffixIcon: const Icon(Icons.date_range),
+                      //       labelText:
+                      //           AppLocalizations.of(context).intervalSpace,
+                      //       border: const OutlineInputBorder(),
+                      //     ),
+                      //     validator: (value) {
+                      //       if (value == null || int.tryParse(value!) == null) {
+                      //         return AppLocalizations.of(context)
+                      //             .pleaseEnterSomething;
+                      //       }
+                      //     },
+                      //     onSaved: (String? value) {
+                      //       setState(() {
+                      //         recurringIntervalCount = int.parse(value!);
+                      //       });
+                      //     },
+                      //   ),
+                      // ),
+
                     ],
                   ),
                 ),
