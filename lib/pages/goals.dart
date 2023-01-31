@@ -2,8 +2,8 @@ import 'package:checked/collections/goal.dart';
 import 'package:checked/navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
-import 'package:syncfusion_flutter_charts/charts.dart';
-import 'package:syncfusion_flutter_charts/sparkcharts.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'editors/goal_editor.dart';
 
 class Goals extends StatefulWidget {
   NavigationController navigationController;
@@ -36,11 +36,84 @@ class _GoalsState extends State<Goals> {
   }
 
   void onFABPressed() {
+    print("On Fab pressed");
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) => GoalEditor(
+              refresh: () {
+                setState(() {
+                  _loadData();
+                });
+              },
+            )));
+  }
 
+  Widget getSubtitleCard(String title, int count) {
+    return Card(
+        child: Padding(
+      padding: const EdgeInsets.fromLTRB(4, 1, 4, 1),
+      child: Row(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(0, 0, 1, 0),
+            child: Icon(Icons.track_changes),
+          ),
+          Text("$title:"),
+          Text(count.toString())
+        ],
+      ),
+    ));
+  }
+
+  Widget getGoalListTile(Goal goal) {
+    return Dismissible(
+      background: Container(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        child: const Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Icon(
+            Icons.delete,
+            color: Colors.white,
+          ),
+        ),
+      ),
+      onDismissed: (DismissDirection dismissDirection) async {
+        await isar!.writeTxn(() async {
+          await isar!.goals.delete(goal.id);
+        });
+      },
+      key: UniqueKey(),
+      child: ListTile(
+        onTap: () {
+          Navigator.of(context).push(MaterialPageRoute(
+              builder: (context) => GoalEditor(
+                    goal: goal,
+                    refresh: () {
+                      setState(() {
+                        _loadData();
+                      });
+                    },
+                  )));
+        },
+        title: Text(goal.name),
+        subtitle: Row(
+          children: [
+            getSubtitleCard(
+                AppLocalizations.of(context).daily, goal.dailyPoints),
+            getSubtitleCard(
+                AppLocalizations.of(context).monthly, goal.weeklyPoints),
+            getSubtitleCard(
+                AppLocalizations.of(context).weekly, goal.monthlyPoints),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Placeholder();
+    return ListView(
+      children: [for (Goal goal in data) getGoalListTile(goal)],
+    );
   }
 }

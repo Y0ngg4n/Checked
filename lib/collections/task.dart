@@ -19,6 +19,7 @@ class Task {
   DateTime? recurringNext;
   RecurringDays recurringDays;
   int recurringIntervalCount = 1;
+  List<GoalPoints> goals = [];
   @enumerated
   RecurringInterval interval = RecurringInterval.week;
   DateTime? recurringStartDate;
@@ -87,4 +88,10 @@ class StartDateReminder {
 class DeadlineDateReminder {
   bool enabled = false;
   int? notificationId;
+}
+
+@embedded
+class GoalPoints {
+  int? id;
+  int? points;
 }

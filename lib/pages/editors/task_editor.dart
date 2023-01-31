@@ -1,3 +1,4 @@
+import 'package:checked/collections/goal.dart';
 import 'package:checked/collections/task.dart';
 import 'package:checked/utils/date_time_utils.dart';
 import 'package:flutter/material.dart';
@@ -6,7 +7,9 @@ import 'package:gradient_colored_slider/gradient_colored_slider.dart';
 import 'package:isar/isar.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:select_dialog/select_dialog.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:collection/collection.dart';
 
 const String taskChannel = "pro.obco.checked/task";
 const List<Color> gradientColors = [
@@ -36,6 +39,7 @@ class TaskEditor extends StatefulWidget {
 }
 
 class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
+  Isar? goalIsar;
   final _formKey = GlobalKey<FormState>();
   final maxStepsPrioritySlider = 5;
   String name = "";
@@ -45,6 +49,8 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
   int priority = 1;
   double prioritySlider = 0;
   List<SubTask> subTasks = [];
+  List<Goal?> goals = [];
+  List<GoalPoints> goalPoints = [];
   DateTime? estimation;
   DateTime? spent;
   DateTime? recurringStartDate;
@@ -85,7 +91,25 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
       startDateReminder = widget.task!.startDateReminder;
       deadlineDateReminder = widget.task!.deadlineDateReminder;
       recurringNext = widget.task!.recurringNext;
+      goalPoints = widget.task!.goals.toList(growable: true);
     }
+    WidgetsFlutterBinding.ensureInitialized()
+        .scheduleFrameCallback((timeStamp) async {
+      Isar? isar = Isar.getInstance("Goal");
+      isar ??= await Isar.open([GoalSchema], name: "Goal");
+      setState(() {
+        goalIsar = isar;
+      });
+      if (widget.task != null) {
+        List<Goal?> response = await isar.goals.getAll(widget.task!.goals
+            .map((e) => e.id!)
+            .toList()
+            .toList(growable: true));
+        setState(() {
+          goals = response;
+        });
+      }
+    });
     nameController.text = name;
     descriptionController.text = description;
     deadlineController.text =
@@ -261,7 +285,8 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
       ..recurringIntervalCount = recurringIntervalCount
       ..startDateReminder = startDateReminder
       ..deadlineDateReminder = deadlineDateReminder
-      ..interval = interval;
+      ..interval = interval
+      ..goals = goalPoints;
     Isar? isar = Isar.getInstance("Task");
     isar ??= await Isar.open([TaskSchema], name: "Task");
     await isar.writeTxn(() async {
@@ -329,6 +354,86 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
     );
   }
 
+  void _askGoal() async {
+    List<Goal> availableGoals = await goalIsar!.goals.where().findAll();
+    List<Goal> selectedValues = [];
+    await SelectDialog.showModal<Goal>(
+      context,
+      label: AppLocalizations.of(context).goal,
+      multipleSelectedValues: selectedValues,
+      items: availableGoals,
+      onMultipleItemsChange: (List<Goal> selected) {
+        setState(() {
+          selectedValues = selected;
+        });
+      },
+    );
+
+    setState(() {
+      goals = selectedValues;
+    });
+  }
+
+  Widget _getGoals() {
+    List<Widget> goalWidgets = [];
+    for (Goal? goal in goals) {
+      if (goal != null) {
+        GoalPoints? goalPoint =
+            goalPoints.firstWhereOrNull((element) => element!.id == goal.id);
+        goalWidgets.add(Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(goal.name, style: Theme.of(context).textTheme.bodyLarge,),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextFormField(
+                initialValue: goalPoint != null
+                    ? (goalPoint.points != null
+                        ? goalPoint.points.toString()
+                        : "")
+                    : "",
+                decoration: InputDecoration(
+                  suffixIcon: const Icon(Icons.numbers),
+                  labelText: AppLocalizations.of(context).points,
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                onSaved: (value) {
+                  if (value != null && int.tryParse(value) != null) {
+                    setState(() {
+                      int points = int.parse(value);
+                      if (goalPoint == null) {
+                        goalPoints.add(GoalPoints()
+                          ..id = goal.id
+                          ..points = points);
+                      } else {
+                        goalPoint.points = points;
+                      }
+                    });
+                  }
+                },
+                validator: (value) {
+                  if (value != null && int.tryParse(value) == null) {
+                    return AppLocalizations.of(context).pleaseEnterSomething;
+                  }
+                  _formKey.currentState!.save();
+                  return null;
+                },
+              ),
+            )
+          ],
+        ));
+      }
+    }
+
+    return Column(
+      children: goalWidgets,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     List<Widget> reminderWidgets = dateTimeReminders
@@ -390,7 +495,7 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
     }).toList();
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context).one_time),
+        title: Text(AppLocalizations.of(context).task),
       ),
       body: Form(
         key: _formKey,
@@ -683,6 +788,30 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
                               });
                             },
                             icon: const Icon(Icons.add)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Card(
+                child: Column(
+                  children: [
+                    _getGoals(),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ElevatedButton(
+                        child: Row(
+                          children: [
+                            const Icon(Icons.add),
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(AppLocalizations.of(context).goal),
+                            ),
+                          ],
+                        ),
+                        onPressed: () {
+                          _askGoal();
+                        },
                       ),
                     ),
                   ],

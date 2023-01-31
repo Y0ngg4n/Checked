@@ -2,7 +2,6 @@
     "appName": "Checked",
     "name": "Name",
     "description": "Description",
-    "one_time": "One-Time",
     "recurring": "Recurring",
     "achievements": "Achievements",
     "stats": "Stats",
@@ -29,5 +28,8 @@
     "bevoreEvent": "Before the Event",
     "atDeadline": "At Deadline",
     "atEvent": "At Event",
-    "specificDateTime": "specific Date and Time"
+    "specificDateTime": "specific Date and Time",
+    "task": "Task",
+    "points": "Points",
+    "goal": "Goal"
 }

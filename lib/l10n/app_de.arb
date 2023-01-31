@@ -2,7 +2,6 @@
     "appName": "Checked",
     "name": "Name",
     "description": "Beschreibung",
-    "one_time": "Einmalig",
     "recurring": "Wiederholend",
     "achievements": "Ziele",
     "stats": "Statistiken",
@@ -29,5 +28,8 @@
     "bevoreEvent": "Vor dem Ereignis",
     "atDeadline": "Wenn Deadline erreicht",
     "atEvent": "Beim Entreten des Ereignis",
-    "specificDateTime": "spezifisches Datum und Uhrzeit"
+    "specificDateTime": "spezifisches Datum und Uhrzeit",
+    "task": "Aufgabe",
+    "points": "Punkte",
+    "goal": "Ziel"
 }
