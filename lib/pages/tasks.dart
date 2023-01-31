@@ -1,6 +1,7 @@
 import 'package:checked/collections/task.dart';
 import 'package:checked/navigation.dart';
 import 'package:checked/pages/editors/task_editor.dart';
+import 'package:checked/utils/date_time_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:isar/isar.dart';
@@ -20,7 +21,7 @@ class TasksPage extends StatefulWidget {
   State<TasksPage> createState() => _TasksPageState();
 }
 
-class _TasksPageState extends State<TasksPage> {
+class _TasksPageState extends State<TasksPage> with DateTimeUtils {
   Isar? isar;
   List<Task> data = [];
   bool showChecked = false;
@@ -66,7 +67,7 @@ class _TasksPageState extends State<TasksPage> {
       } else if (!a.checked && b.checked) {
         return -1;
       } else {
-        return a.name!.compareTo(b.name!);
+        return a.name.compareTo(b.name);
       }
     }));
   }
@@ -132,7 +133,9 @@ class _TasksPageState extends State<TasksPage> {
               leading: Checkbox(
                 value: task.checked,
                 onChanged: (value) async {
-                  task.checked = !task.checked;
+                  if (!task.recurring) task.checked = !task.checked;
+                  task.recurringNext = calculateNextDate(
+                      task.recurringNext, task.interval, true);
                   await isar!.writeTxn(() async {
                     await isar!.tasks.put(task); // delete
                   });
@@ -175,13 +178,74 @@ class _TasksPageState extends State<TasksPage> {
                         fontWeight: FontWeight.bold)
                     : const TextStyle(fontWeight: FontWeight.bold),
               ),
-              subtitle: Text(
-                ("${task.deadline != null ? "${task.deadline!.day}.${task.deadline!.month}.${task.deadline!.year} ${task.deadline!.hour}:${task.deadline!.minute} | " : ""} ${task.description ?? ""}"),
-                style: task.checked
-                    ? const TextStyle(
-                        decoration: TextDecoration.lineThrough,
-                      )
-                    : const TextStyle(),
+              subtitle: Row(
+                children: [
+                  Visibility(
+                    visible: task.recurringNext != null,
+                    child: Card(
+                        color: task.recurringNext != null
+                            ? (task.recurringNext!.isBefore(DateTime.now())
+                                ? Colors.red
+                                : null)
+                            : null,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(4, 1, 4, 1),
+                          child: Row(
+                            children: [
+                              const Padding(
+                                padding: EdgeInsets.fromLTRB(0, 0, 1, 0),
+                                child: Icon(Icons.repeat),
+                              ),
+                              Text(task.recurringNext != null
+                                  ? buildDateTimeText(task.recurringNext!)
+                                  : ""),
+                            ],
+                          ),
+                        )),
+                  ),
+                  Visibility(
+                    visible: task.deadline != null,
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 1, 4, 1),
+                        child: Row(
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.fromLTRB(0, 0, 1, 0),
+                              child: Icon(Icons.cancel_schedule_send),
+                            ),
+                            Text(
+                              (task.deadline != null
+                                  ? "${task.deadline!.day}.${task.deadline!.month}.${task.deadline!.year} ${task.deadline!.hour}:${task.deadline!.minute}"
+                                  : ""),
+                              style: task.checked
+                                  ? const TextStyle(
+                                      decoration: TextDecoration.lineThrough,
+                                    )
+                                  : const TextStyle(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Visibility(
+                    visible: task.description.isNotEmpty,
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 1, 4, 1),
+                        child: Text(
+                          (task.description ?? ""),
+                          style: task.checked
+                              ? const TextStyle(
+                                  decoration: TextDecoration.lineThrough,
+                                )
+                              : const TextStyle(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             Visibility(

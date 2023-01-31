@@ -1,10 +1,11 @@
+import 'package:checked/pages/goals.dart';
 import 'package:checked/pages/tasks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NavigationController {
   late void Function() onFABPressedTasks;
-  late void Function() onFABPressedRecurring;
+  late void Function() onFABPressedGoals;
   late void Function() onFABPressedAchievements;
   late void Function() onFABPressedStats;
 }
@@ -29,7 +30,7 @@ class _NavigationState extends State<Navigation> {
         navigationController.onFABPressedTasks();
         break;
       case 1:
-        navigationController.onFABPressedRecurring();
+        navigationController.onFABPressedGoals();
         break;
       case 2:
         navigationController.onFABPressedAchievements();
@@ -52,6 +53,9 @@ class _NavigationState extends State<Navigation> {
               widget.flutterLocalNotificationsPlugin,
           navigationController: navigationController,
         );
+        break;
+      case 1:
+        body = Goals(navigationController: navigationController,);
         break;
       default:
         body = Container();
@@ -93,7 +97,7 @@ class _NavigationState extends State<Navigation> {
                 backgroundColor: Theme.of(context).backgroundColor),
             BottomNavigationBarItem(
                 icon: const Icon(Icons.repeat),
-                label: "Recurring",
+                label: "Goals",
                 backgroundColor: Theme.of(context).backgroundColor),
             BottomNavigationBarItem(
                 icon: const Icon(Icons.military_tech),

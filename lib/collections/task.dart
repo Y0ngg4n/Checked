@@ -16,6 +16,7 @@ class Task {
   DateTime created;
   DateTime? deadline;
   bool recurring = false;
+  DateTime? recurringNext;
   RecurringDays recurringDays;
   int recurringIntervalCount = 1;
   @enumerated

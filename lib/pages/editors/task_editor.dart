@@ -1,4 +1,5 @@
 import 'package:checked/collections/task.dart';
+import 'package:checked/utils/date_time_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:gradient_colored_slider/gradient_colored_slider.dart';
@@ -34,7 +35,7 @@ class TaskEditor extends StatefulWidget {
   State<TaskEditor> createState() => _TaskEditorState();
 }
 
-class _TaskEditorState extends State<TaskEditor> {
+class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
   final _formKey = GlobalKey<FormState>();
   final maxStepsPrioritySlider = 5;
   String name = "";
@@ -47,6 +48,7 @@ class _TaskEditorState extends State<TaskEditor> {
   DateTime? estimation;
   DateTime? spent;
   DateTime? recurringStartDate;
+  DateTime? recurringNext;
   bool recurring = false;
   int recurringIntervalCount = 1;
   StartDateReminder startDateReminder = StartDateReminder();
@@ -72,16 +74,17 @@ class _TaskEditorState extends State<TaskEditor> {
       description = widget.task!.description;
       deadline = widget.task!.deadline;
       dateTimeReminders = widget.task!.dateTimeReminders.toList(growable: true);
-      print(dateTimeReminders.length);
       priority = widget.task!.priority;
       subTasks = widget.task!.subTasks.toList(growable: true);
       estimation = widget.task!.estimation;
       spent = widget.task!.spent;
       recurring = widget.task!.recurring;
+      interval = widget.task!.interval;
       recurringIntervalCount = widget.task!.recurringIntervalCount;
       recurringStartDate = widget.task!.recurringStartDate;
       startDateReminder = widget.task!.startDateReminder;
       deadlineDateReminder = widget.task!.deadlineDateReminder;
+      recurringNext = widget.task!.recurringNext;
     }
     nameController.text = name;
     descriptionController.text = description;
@@ -145,6 +148,7 @@ class _TaskEditorState extends State<TaskEditor> {
     await _saveIsar();
   }
 
+  // TODO: Update Notifications when checked
   _createNotifications() async {
     // DateTime Reminders
     List<DateTimeReminder> removeList = [];
@@ -169,7 +173,7 @@ class _TaskEditorState extends State<TaskEditor> {
 
     if (recurring && startDateReminder.enabled) {
       if (recurringIntervalCount == 1) {
-        if (interval != RecurringInterval.minute ||
+        if (interval != RecurringInterval.minute &&
             interval != RecurringInterval.hour) {
           DateTimeComponents dateTimeComponent = DateTimeComponents.time;
           switch (interval) {
@@ -239,6 +243,8 @@ class _TaskEditorState extends State<TaskEditor> {
             priority: priority,
             recurringDays: RecurringDays(),
             subTasks: subTasks);
+    recurringNext =
+        calculateNextDate(recurringNext ?? recurringStartDate, interval, false);
     task
       ..name = name
       ..description = description
@@ -251,6 +257,7 @@ class _TaskEditorState extends State<TaskEditor> {
       ..subTasks = subTasks
       ..recurring = recurring
       ..recurringStartDate = recurringStartDate
+      ..recurringNext = recurringNext
       ..recurringIntervalCount = recurringIntervalCount
       ..startDateReminder = startDateReminder
       ..deadlineDateReminder = deadlineDateReminder
@@ -339,7 +346,7 @@ class _TaskEditorState extends State<TaskEditor> {
               ),
             ))
         .toList();
-    if (startDateReminder!.enabled) {
+    if (startDateReminder.enabled) {
       reminderWidgets.add(ListTile(
         leading: const Icon(Icons.alarm),
         title: Text(AppLocalizations.of(context).startDate),
@@ -347,8 +354,8 @@ class _TaskEditorState extends State<TaskEditor> {
           icon: const Icon(Icons.delete),
           onPressed: () {
             setState(() {
-              startDateReminder!.enabled = false;
-              _cancelNotification(startDateReminder!.notificationId!);
+              startDateReminder.enabled = false;
+              _cancelNotification(startDateReminder.notificationId!);
             });
           },
         ),
@@ -522,7 +529,7 @@ class _TaskEditorState extends State<TaskEditor> {
                                   break;
                                 case AlarmType.atStartDate:
                                   setState(() {
-                                    startDateReminder!.enabled = true;
+                                    startDateReminder.enabled = true;
                                   });
                                   // TODO: Handle this case.
                                   break;
@@ -566,11 +573,11 @@ class _TaskEditorState extends State<TaskEditor> {
                                 value: interval,
                                 items: [
                                   for (RecurringInterval item
-                                  in RecurringInterval.values)
+                                      in RecurringInterval.values)
                                     DropdownMenuItem(
                                         value: item,
-                                        child: Text(
-                                            intervalNameMapping[item] ?? "Empty")),
+                                        child: Text(intervalNameMapping[item] ??
+                                            "Empty")),
                                 ],
                                 onChanged: (value) {
                                   setState(() {
@@ -581,7 +588,8 @@ class _TaskEditorState extends State<TaskEditor> {
                         ],
                       ),
                       Visibility(
-                        visible: !(interval == RecurringInterval.minute || interval == RecurringInterval.hour),
+                        visible: !(interval == RecurringInterval.minute ||
+                            interval == RecurringInterval.hour),
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: TextFormField(
@@ -593,7 +601,8 @@ class _TaskEditorState extends State<TaskEditor> {
                               border: const OutlineInputBorder(),
                             ),
                             validator: (value) {
-                              if (recurring && (value == null || value.isEmpty)) {
+                              if (recurring &&
+                                  (value == null || value.isEmpty)) {
                                 return AppLocalizations.of(context)
                                     .pleaseEnterSomething;
                               }
@@ -637,7 +646,6 @@ class _TaskEditorState extends State<TaskEditor> {
                       //     },
                       //   ),
                       // ),
-
                     ],
                   ),
                 ),
@@ -772,22 +780,8 @@ class _TaskEditorState extends State<TaskEditor> {
     );
   }
 
-  String buildDateTimeText(DateTime dateTime) {
-    return "${dateTime.day}.${dateTime.month}.${dateTime.year} ${dateTime.hour}:${dateTime.minute}";
-  }
-
   int _rangedSelectedValue(double value) {
     double stepRange = 1.0 / maxStepsPrioritySlider;
     return (value / stepRange + 1).clamp(1, maxStepsPrioritySlider).toInt();
   }
-}
-
-class DateTimeMaxMin {
-  static const _numDays = 100000000;
-
-  static DateTime get min => DateTime.fromMicrosecondsSinceEpoch(0)
-      .subtract(const Duration(days: _numDays));
-
-  static DateTime get max => DateTime.fromMicrosecondsSinceEpoch(0)
-      .add(const Duration(days: _numDays));
 }

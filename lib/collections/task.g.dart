@@ -91,24 +91,29 @@ const TaskSchema = CollectionSchema(
       name: r'recurringIntervalCount',
       type: IsarType.long,
     ),
-    r'recurringStartDate': PropertySchema(
+    r'recurringNext': PropertySchema(
       id: 14,
+      name: r'recurringNext',
+      type: IsarType.dateTime,
+    ),
+    r'recurringStartDate': PropertySchema(
+      id: 15,
       name: r'recurringStartDate',
       type: IsarType.dateTime,
     ),
     r'spent': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'spent',
       type: IsarType.dateTime,
     ),
     r'startDateReminder': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'startDateReminder',
       type: IsarType.object,
       target: r'StartDateReminder',
     ),
     r'subTasks': PropertySchema(
-      id: 17,
+      id: 18,
       name: r'subTasks',
       type: IsarType.objectList,
       target: r'SubTask',
@@ -206,16 +211,17 @@ void _taskSerialize(
     object.recurringDays,
   );
   writer.writeLong(offsets[13], object.recurringIntervalCount);
-  writer.writeDateTime(offsets[14], object.recurringStartDate);
-  writer.writeDateTime(offsets[15], object.spent);
+  writer.writeDateTime(offsets[14], object.recurringNext);
+  writer.writeDateTime(offsets[15], object.recurringStartDate);
+  writer.writeDateTime(offsets[16], object.spent);
   writer.writeObject<StartDateReminder>(
-    offsets[16],
+    offsets[17],
     allOffsets,
     StartDateReminderSchema.serialize,
     object.startDateReminder,
   );
   writer.writeObjectList<SubTask>(
-    offsets[17],
+    offsets[18],
     allOffsets,
     SubTaskSchema.serialize,
     object.subTasks,
@@ -249,9 +255,9 @@ Task _taskDeserialize(
           allOffsets,
         ) ??
         RecurringDays(),
-    spent: reader.readDateTimeOrNull(offsets[15]),
+    spent: reader.readDateTimeOrNull(offsets[16]),
     subTasks: reader.readObjectList<SubTask>(
-          offsets[17],
+          offsets[18],
           SubTaskSchema.deserialize,
           allOffsets,
           SubTask(),
@@ -271,9 +277,10 @@ Task _taskDeserialize(
           RecurringInterval.minute;
   object.recurring = reader.readBool(offsets[11]);
   object.recurringIntervalCount = reader.readLong(offsets[13]);
-  object.recurringStartDate = reader.readDateTimeOrNull(offsets[14]);
+  object.recurringNext = reader.readDateTimeOrNull(offsets[14]);
+  object.recurringStartDate = reader.readDateTimeOrNull(offsets[15]);
   object.startDateReminder = reader.readObjectOrNull<StartDateReminder>(
-        offsets[16],
+        offsets[17],
         StartDateReminderSchema.deserialize,
         allOffsets,
       ) ??
@@ -338,13 +345,15 @@ P _taskDeserializeProp<P>(
     case 15:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 16:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 17:
       return (reader.readObjectOrNull<StartDateReminder>(
             offset,
             StartDateReminderSchema.deserialize,
             allOffsets,
           ) ??
           StartDateReminder()) as P;
-    case 17:
+    case 18:
       return (reader.readObjectList<SubTask>(
             offset,
             SubTaskSchema.deserialize,
@@ -1282,6 +1291,75 @@ extension TaskQueryFilter on QueryBuilder<Task, Task, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Task, Task, QAfterFilterCondition> recurringNextIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'recurringNext',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> recurringNextIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'recurringNext',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> recurringNextEqualTo(
+      DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'recurringNext',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> recurringNextGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'recurringNext',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> recurringNextLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'recurringNext',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> recurringNextBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'recurringNext',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterFilterCondition> recurringStartDateIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -1678,6 +1756,18 @@ extension TaskQuerySortBy on QueryBuilder<Task, Task, QSortBy> {
     });
   }
 
+  QueryBuilder<Task, Task, QAfterSortBy> sortByRecurringNext() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'recurringNext', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> sortByRecurringNextDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'recurringNext', Sort.desc);
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterSortBy> sortByRecurringStartDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'recurringStartDate', Sort.asc);
@@ -1848,6 +1938,18 @@ extension TaskQuerySortThenBy on QueryBuilder<Task, Task, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Task, Task, QAfterSortBy> thenByRecurringNext() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'recurringNext', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> thenByRecurringNextDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'recurringNext', Sort.desc);
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterSortBy> thenByRecurringStartDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'recurringStartDate', Sort.asc);
@@ -1939,6 +2041,12 @@ extension TaskQueryWhereDistinct on QueryBuilder<Task, Task, QDistinct> {
   QueryBuilder<Task, Task, QDistinct> distinctByRecurringIntervalCount() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'recurringIntervalCount');
+    });
+  }
+
+  QueryBuilder<Task, Task, QDistinct> distinctByRecurringNext() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'recurringNext');
     });
   }
 
@@ -2045,6 +2153,12 @@ extension TaskQueryProperty on QueryBuilder<Task, Task, QQueryProperty> {
   QueryBuilder<Task, int, QQueryOperations> recurringIntervalCountProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'recurringIntervalCount');
+    });
+  }
+
+  QueryBuilder<Task, DateTime?, QQueryOperations> recurringNextProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'recurringNext');
     });
   }
 
