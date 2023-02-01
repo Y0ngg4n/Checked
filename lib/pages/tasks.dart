@@ -1,4 +1,5 @@
 import 'package:checked/collections/task.dart';
+import 'package:checked/collections/task_history.dart';
 import 'package:checked/navigation.dart';
 import 'package:checked/pages/editors/task_editor.dart';
 import 'package:checked/utils/date_time_utils.dart';
@@ -6,6 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:isar/isar.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:collection/collection.dart';
+
+import '../collections/goal.dart';
 
 class TasksPage extends StatefulWidget {
   final NavigationController navigationController;
@@ -24,6 +28,7 @@ class TasksPage extends StatefulWidget {
 class _TasksPageState extends State<TasksPage> with DateTimeUtils {
   Isar? isar;
   List<Task> data = [];
+  List<TaskHistory> history = [];
   bool showChecked = false;
   Map<Task, bool> subTasksVisible = {};
 
@@ -31,31 +36,32 @@ class _TasksPageState extends State<TasksPage> with DateTimeUtils {
   void initState() {
     super.initState();
     widget.navigationController.onFABPressedTasks = onFABPressed;
-    _loadData();
+    WidgetsFlutterBinding.ensureInitialized()
+        .scheduleFrameCallback((timeStamp) async {
+      isar = Isar.getInstance();
+      isar ??= await Isar.open([TaskSchema, TaskHistorySchema, GoalSchema, GoalPointsSchema]);
+      _loadData();
+    });
   }
 
-  void onFABPressed() {
+  void onFABPressed() async {
     print("On Fab pressed");
-    Navigator.of(context).push(MaterialPageRoute(
+    await Navigator.of(context).push(MaterialPageRoute(
         builder: (context) => TaskEditor(
               flutterLocalNotificationsPlugin:
                   widget.flutterLocalNotificationsPlugin,
-              refresh: () {
-                setState(() {
-                  _loadData();
-                });
-              },
             )));
+    await _loadData();
   }
 
   Future<void> _loadData() async {
-    print("Load Data");
-    isar = Isar.getInstance("Task");
-    isar ??= await Isar.open([TaskSchema], name: "Task");
     List<Task> response = await isar!.tasks.where().findAll();
+    List<TaskHistory> historyResponse =
+        await isar!.taskHistorys.where().findAll();
     _sort();
     setState(() {
       data = response;
+      history = historyResponse;
     });
     _subTaskMapping();
   }
@@ -79,6 +85,7 @@ class _TasksPageState extends State<TasksPage> with DateTimeUtils {
   }
 
   _getListTile(Task task) {
+    print("ListTile " + task.goals.length.toString());
     List<Widget> subTasks = [];
     for (SubTask subTask in task.subTasks) {
       subTasks.add(Padding(
@@ -99,6 +106,7 @@ class _TasksPageState extends State<TasksPage> with DateTimeUtils {
         ),
       ));
     }
+
     return Dismissible(
       background: Container(
         color: Colors.red,
@@ -120,6 +128,12 @@ class _TasksPageState extends State<TasksPage> with DateTimeUtils {
             .cancel(task.startDateReminder.notificationId!);
         await widget.flutterLocalNotificationsPlugin
             .cancel(task.deadlineDateReminder.notificationId!);
+        for(TaskHistory taskHistory in history){
+          await isar!.writeTxn(() async {
+            taskHistory.tasks.remove(task);
+            await taskHistory.tasks.save();
+          });
+        }
         await isar!.writeTxn(() async {
           await isar!.tasks.delete(task.id);
         });
@@ -136,9 +150,24 @@ class _TasksPageState extends State<TasksPage> with DateTimeUtils {
                   if (!task.recurring) task.checked = !task.checked;
                   task.recurringNext = calculateNextDate(
                       task.recurringNext, task.interval, true);
+
+                  DateTime now = DateTime.now();
+                  DateTime nowDay = DateTime(now.year, now.month, now.day);
+                  TaskHistory? taskHistory = history.firstWhereOrNull(
+                      (element) => element.dateTime == nowDay);
+                  taskHistory ??= TaskHistory();
+                  taskHistory = taskHistory..dateTime = nowDay;
+                  if (task.checked || task.recurring) {
+                    taskHistory.tasks.add(task);
+                  } else {
+                    taskHistory.tasks.remove(task);
+                  }
                   await isar!.writeTxn(() async {
-                    await isar!.tasks.put(task); // delete
+                    await isar!.tasks.put(task);
+                    await isar!.taskHistorys.put(taskHistory!);
+                    await taskHistory.tasks.save();
                   });
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).greatGoOn)));
                   setState(() {
                     _sort();
                   });
@@ -157,18 +186,14 @@ class _TasksPageState extends State<TasksPage> with DateTimeUtils {
                   },
                 ),
               ),
-              onTap: () {
-                Navigator.of(context).push(MaterialPageRoute(
+              onTap: () async {
+                await Navigator.of(context).push(MaterialPageRoute(
                     builder: (context) => TaskEditor(
-                          flutterLocalNotificationsPlugin:
-                              widget.flutterLocalNotificationsPlugin,
-                          refresh: () {
-                            setState(() {
-                              _loadData();
-                            });
-                          },
-                          task: task,
-                        )));
+                      flutterLocalNotificationsPlugin:
+                      widget.flutterLocalNotificationsPlugin,
+                      task: task
+                    )));
+                await _loadData();
               },
               title: Text(
                 task.name ?? "",

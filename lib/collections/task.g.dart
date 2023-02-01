@@ -59,67 +59,61 @@ const TaskSchema = CollectionSchema(
       name: r'estimation',
       type: IsarType.dateTime,
     ),
-    r'goals': PropertySchema(
-      id: 8,
-      name: r'goals',
-      type: IsarType.objectList,
-      target: r'GoalPoints',
-    ),
     r'interval': PropertySchema(
-      id: 9,
+      id: 8,
       name: r'interval',
       type: IsarType.byte,
       enumMap: _TaskintervalEnumValueMap,
     ),
     r'name': PropertySchema(
-      id: 10,
+      id: 9,
       name: r'name',
       type: IsarType.string,
     ),
     r'priority': PropertySchema(
-      id: 11,
+      id: 10,
       name: r'priority',
       type: IsarType.long,
     ),
     r'recurring': PropertySchema(
-      id: 12,
+      id: 11,
       name: r'recurring',
       type: IsarType.bool,
     ),
     r'recurringDays': PropertySchema(
-      id: 13,
+      id: 12,
       name: r'recurringDays',
       type: IsarType.object,
       target: r'RecurringDays',
     ),
     r'recurringIntervalCount': PropertySchema(
-      id: 14,
+      id: 13,
       name: r'recurringIntervalCount',
       type: IsarType.long,
     ),
     r'recurringNext': PropertySchema(
-      id: 15,
+      id: 14,
       name: r'recurringNext',
       type: IsarType.dateTime,
     ),
     r'recurringStartDate': PropertySchema(
-      id: 16,
+      id: 15,
       name: r'recurringStartDate',
       type: IsarType.dateTime,
     ),
     r'spent': PropertySchema(
-      id: 17,
+      id: 16,
       name: r'spent',
       type: IsarType.dateTime,
     ),
     r'startDateReminder': PropertySchema(
-      id: 18,
+      id: 17,
       name: r'startDateReminder',
       type: IsarType.object,
       target: r'StartDateReminder',
     ),
     r'subTasks': PropertySchema(
-      id: 19,
+      id: 18,
       name: r'subTasks',
       type: IsarType.objectList,
       target: r'SubTask',
@@ -131,12 +125,18 @@ const TaskSchema = CollectionSchema(
   deserializeProp: _taskDeserializeProp,
   idName: r'id',
   indexes: {},
-  links: {},
+  links: {
+    r'goals': LinkSchema(
+      id: 8778453144324835953,
+      name: r'goals',
+      target: r'GoalPoints',
+      single: false,
+    )
+  },
   embeddedSchemas: {
     r'DateTimeReminder': DateTimeReminderSchema,
     r'SubTask': SubTaskSchema,
     r'RecurringDays': RecurringDaysSchema,
-    r'GoalPoints': GoalPointsSchema,
     r'StartDateReminder': StartDateReminderSchema,
     r'DeadlineDateReminder': DeadlineDateReminderSchema
   },
@@ -165,14 +165,6 @@ int _taskEstimateSize(
       DeadlineDateReminderSchema.estimateSize(object.deadlineDateReminder,
           allOffsets[DeadlineDateReminder]!, allOffsets);
   bytesCount += 3 + object.description.length * 3;
-  bytesCount += 3 + object.goals.length * 3;
-  {
-    final offsets = allOffsets[GoalPoints]!;
-    for (var i = 0; i < object.goals.length; i++) {
-      final value = object.goals[i];
-      bytesCount += GoalPointsSchema.estimateSize(value, offsets, allOffsets);
-    }
-  }
   bytesCount += 3 + object.name.length * 3;
   bytesCount += 3 +
       RecurringDaysSchema.estimateSize(
@@ -215,34 +207,28 @@ void _taskSerialize(
   writer.writeString(offsets[5], object.description);
   writer.writeDateTime(offsets[6], object.edited);
   writer.writeDateTime(offsets[7], object.estimation);
-  writer.writeObjectList<GoalPoints>(
-    offsets[8],
-    allOffsets,
-    GoalPointsSchema.serialize,
-    object.goals,
-  );
-  writer.writeByte(offsets[9], object.interval.index);
-  writer.writeString(offsets[10], object.name);
-  writer.writeLong(offsets[11], object.priority);
-  writer.writeBool(offsets[12], object.recurring);
+  writer.writeByte(offsets[8], object.interval.index);
+  writer.writeString(offsets[9], object.name);
+  writer.writeLong(offsets[10], object.priority);
+  writer.writeBool(offsets[11], object.recurring);
   writer.writeObject<RecurringDays>(
-    offsets[13],
+    offsets[12],
     allOffsets,
     RecurringDaysSchema.serialize,
     object.recurringDays,
   );
-  writer.writeLong(offsets[14], object.recurringIntervalCount);
-  writer.writeDateTime(offsets[15], object.recurringNext);
-  writer.writeDateTime(offsets[16], object.recurringStartDate);
-  writer.writeDateTime(offsets[17], object.spent);
+  writer.writeLong(offsets[13], object.recurringIntervalCount);
+  writer.writeDateTime(offsets[14], object.recurringNext);
+  writer.writeDateTime(offsets[15], object.recurringStartDate);
+  writer.writeDateTime(offsets[16], object.spent);
   writer.writeObject<StartDateReminder>(
-    offsets[18],
+    offsets[17],
     allOffsets,
     StartDateReminderSchema.serialize,
     object.startDateReminder,
   );
   writer.writeObjectList<SubTask>(
-    offsets[19],
+    offsets[18],
     allOffsets,
     SubTaskSchema.serialize,
     object.subTasks,
@@ -268,17 +254,17 @@ Task _taskDeserialize(
     description: reader.readString(offsets[5]),
     edited: reader.readDateTime(offsets[6]),
     estimation: reader.readDateTimeOrNull(offsets[7]),
-    name: reader.readString(offsets[10]),
-    priority: reader.readLong(offsets[11]),
+    name: reader.readString(offsets[9]),
+    priority: reader.readLong(offsets[10]),
     recurringDays: reader.readObjectOrNull<RecurringDays>(
-          offsets[13],
+          offsets[12],
           RecurringDaysSchema.deserialize,
           allOffsets,
         ) ??
         RecurringDays(),
-    spent: reader.readDateTimeOrNull(offsets[17]),
+    spent: reader.readDateTimeOrNull(offsets[16]),
     subTasks: reader.readObjectList<SubTask>(
-          offsets[19],
+          offsets[18],
           SubTaskSchema.deserialize,
           allOffsets,
           SubTask(),
@@ -292,23 +278,16 @@ Task _taskDeserialize(
         allOffsets,
       ) ??
       DeadlineDateReminder();
-  object.goals = reader.readObjectList<GoalPoints>(
-        offsets[8],
-        GoalPointsSchema.deserialize,
-        allOffsets,
-        GoalPoints(),
-      ) ??
-      [];
   object.id = id;
   object.interval =
-      _TaskintervalValueEnumMap[reader.readByteOrNull(offsets[9])] ??
+      _TaskintervalValueEnumMap[reader.readByteOrNull(offsets[8])] ??
           RecurringInterval.minute;
-  object.recurring = reader.readBool(offsets[12]);
-  object.recurringIntervalCount = reader.readLong(offsets[14]);
-  object.recurringNext = reader.readDateTimeOrNull(offsets[15]);
-  object.recurringStartDate = reader.readDateTimeOrNull(offsets[16]);
+  object.recurring = reader.readBool(offsets[11]);
+  object.recurringIntervalCount = reader.readLong(offsets[13]);
+  object.recurringNext = reader.readDateTimeOrNull(offsets[14]);
+  object.recurringStartDate = reader.readDateTimeOrNull(offsets[15]);
   object.startDateReminder = reader.readObjectOrNull<StartDateReminder>(
-        offsets[18],
+        offsets[17],
         StartDateReminderSchema.deserialize,
         allOffsets,
       ) ??
@@ -351,45 +330,37 @@ P _taskDeserializeProp<P>(
     case 7:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 8:
-      return (reader.readObjectList<GoalPoints>(
-            offset,
-            GoalPointsSchema.deserialize,
-            allOffsets,
-            GoalPoints(),
-          ) ??
-          []) as P;
-    case 9:
       return (_TaskintervalValueEnumMap[reader.readByteOrNull(offset)] ??
           RecurringInterval.minute) as P;
-    case 10:
+    case 9:
       return (reader.readString(offset)) as P;
-    case 11:
+    case 10:
       return (reader.readLong(offset)) as P;
-    case 12:
+    case 11:
       return (reader.readBool(offset)) as P;
-    case 13:
+    case 12:
       return (reader.readObjectOrNull<RecurringDays>(
             offset,
             RecurringDaysSchema.deserialize,
             allOffsets,
           ) ??
           RecurringDays()) as P;
-    case 14:
+    case 13:
       return (reader.readLong(offset)) as P;
+    case 14:
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 15:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 16:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 17:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 18:
       return (reader.readObjectOrNull<StartDateReminder>(
             offset,
             StartDateReminderSchema.deserialize,
             allOffsets,
           ) ??
           StartDateReminder()) as P;
-    case 19:
+    case 18:
       return (reader.readObjectList<SubTask>(
             offset,
             SubTaskSchema.deserialize,
@@ -424,11 +395,12 @@ Id _taskGetId(Task object) {
 }
 
 List<IsarLinkBase<dynamic>> _taskGetLinks(Task object) {
-  return [];
+  return [object.goals];
 }
 
 void _taskAttach(IsarCollection<dynamic> col, Id id, Task object) {
   object.id = id;
+  object.goals.attach(col, col.isar.collection<GoalPoints>(), r'goals', id);
 }
 
 extension TaskQueryWhereSort on QueryBuilder<Task, Task, QWhere> {
@@ -975,90 +947,6 @@ extension TaskQueryFilter on QueryBuilder<Task, Task, QFilterCondition> {
         upper: upper,
         includeUpper: includeUpper,
       ));
-    });
-  }
-
-  QueryBuilder<Task, Task, QAfterFilterCondition> goalsLengthEqualTo(
-      int length) {
-    return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'goals',
-        length,
-        true,
-        length,
-        true,
-      );
-    });
-  }
-
-  QueryBuilder<Task, Task, QAfterFilterCondition> goalsIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'goals',
-        0,
-        true,
-        0,
-        true,
-      );
-    });
-  }
-
-  QueryBuilder<Task, Task, QAfterFilterCondition> goalsIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'goals',
-        0,
-        false,
-        999999,
-        true,
-      );
-    });
-  }
-
-  QueryBuilder<Task, Task, QAfterFilterCondition> goalsLengthLessThan(
-    int length, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'goals',
-        0,
-        true,
-        length,
-        include,
-      );
-    });
-  }
-
-  QueryBuilder<Task, Task, QAfterFilterCondition> goalsLengthGreaterThan(
-    int length, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'goals',
-        length,
-        include,
-        999999,
-        true,
-      );
-    });
-  }
-
-  QueryBuilder<Task, Task, QAfterFilterCondition> goalsLengthBetween(
-    int lower,
-    int upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'goals',
-        lower,
-        includeLower,
-        upper,
-        includeUpper,
-      );
     });
   }
 
@@ -1719,13 +1607,6 @@ extension TaskQueryObject on QueryBuilder<Task, Task, QFilterCondition> {
     });
   }
 
-  QueryBuilder<Task, Task, QAfterFilterCondition> goalsElement(
-      FilterQuery<GoalPoints> q) {
-    return QueryBuilder.apply(this, (query) {
-      return query.object(q, r'goals');
-    });
-  }
-
   QueryBuilder<Task, Task, QAfterFilterCondition> recurringDays(
       FilterQuery<RecurringDays> q) {
     return QueryBuilder.apply(this, (query) {
@@ -1748,7 +1629,63 @@ extension TaskQueryObject on QueryBuilder<Task, Task, QFilterCondition> {
   }
 }
 
-extension TaskQueryLinks on QueryBuilder<Task, Task, QFilterCondition> {}
+extension TaskQueryLinks on QueryBuilder<Task, Task, QFilterCondition> {
+  QueryBuilder<Task, Task, QAfterFilterCondition> goals(
+      FilterQuery<GoalPoints> q) {
+    return QueryBuilder.apply(this, (query) {
+      return query.link(q, r'goals');
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> goalsLengthEqualTo(
+      int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.linkLength(r'goals', length, true, length, true);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> goalsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.linkLength(r'goals', 0, true, 0, true);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> goalsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.linkLength(r'goals', 0, false, 999999, true);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> goalsLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.linkLength(r'goals', 0, true, length, include);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> goalsLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.linkLength(r'goals', length, include, 999999, true);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> goalsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.linkLength(
+          r'goals', lower, includeLower, upper, includeUpper);
+    });
+  }
+}
 
 extension TaskQuerySortBy on QueryBuilder<Task, Task, QSortBy> {
   QueryBuilder<Task, Task, QAfterSortBy> sortByChecked() {
@@ -2244,12 +2181,6 @@ extension TaskQueryProperty on QueryBuilder<Task, Task, QQueryProperty> {
   QueryBuilder<Task, DateTime?, QQueryOperations> estimationProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'estimation');
-    });
-  }
-
-  QueryBuilder<Task, List<GoalPoints>, QQueryOperations> goalsProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'goals');
     });
   }
 
@@ -3302,219 +3233,3 @@ extension DeadlineDateReminderQueryFilter on QueryBuilder<DeadlineDateReminder,
 
 extension DeadlineDateReminderQueryObject on QueryBuilder<DeadlineDateReminder,
     DeadlineDateReminder, QFilterCondition> {}
-
-// coverage:ignore-file
-// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters
-
-const GoalPointsSchema = Schema(
-  name: r'GoalPoints',
-  id: -2376685974032221018,
-  properties: {
-    r'id': PropertySchema(
-      id: 0,
-      name: r'id',
-      type: IsarType.long,
-    ),
-    r'points': PropertySchema(
-      id: 1,
-      name: r'points',
-      type: IsarType.long,
-    )
-  },
-  estimateSize: _goalPointsEstimateSize,
-  serialize: _goalPointsSerialize,
-  deserialize: _goalPointsDeserialize,
-  deserializeProp: _goalPointsDeserializeProp,
-);
-
-int _goalPointsEstimateSize(
-  GoalPoints object,
-  List<int> offsets,
-  Map<Type, List<int>> allOffsets,
-) {
-  var bytesCount = offsets.last;
-  return bytesCount;
-}
-
-void _goalPointsSerialize(
-  GoalPoints object,
-  IsarWriter writer,
-  List<int> offsets,
-  Map<Type, List<int>> allOffsets,
-) {
-  writer.writeLong(offsets[0], object.id);
-  writer.writeLong(offsets[1], object.points);
-}
-
-GoalPoints _goalPointsDeserialize(
-  Id id,
-  IsarReader reader,
-  List<int> offsets,
-  Map<Type, List<int>> allOffsets,
-) {
-  final object = GoalPoints();
-  object.id = reader.readLongOrNull(offsets[0]);
-  object.points = reader.readLongOrNull(offsets[1]);
-  return object;
-}
-
-P _goalPointsDeserializeProp<P>(
-  IsarReader reader,
-  int propertyId,
-  int offset,
-  Map<Type, List<int>> allOffsets,
-) {
-  switch (propertyId) {
-    case 0:
-      return (reader.readLongOrNull(offset)) as P;
-    case 1:
-      return (reader.readLongOrNull(offset)) as P;
-    default:
-      throw IsarError('Unknown property with id $propertyId');
-  }
-}
-
-extension GoalPointsQueryFilter
-    on QueryBuilder<GoalPoints, GoalPoints, QFilterCondition> {
-  QueryBuilder<GoalPoints, GoalPoints, QAfterFilterCondition> idIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'id',
-      ));
-    });
-  }
-
-  QueryBuilder<GoalPoints, GoalPoints, QAfterFilterCondition> idIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'id',
-      ));
-    });
-  }
-
-  QueryBuilder<GoalPoints, GoalPoints, QAfterFilterCondition> idEqualTo(
-      int? value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'id',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<GoalPoints, GoalPoints, QAfterFilterCondition> idGreaterThan(
-    int? value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<GoalPoints, GoalPoints, QAfterFilterCondition> idLessThan(
-    int? value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<GoalPoints, GoalPoints, QAfterFilterCondition> idBetween(
-    int? lower,
-    int? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'id',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
-    });
-  }
-
-  QueryBuilder<GoalPoints, GoalPoints, QAfterFilterCondition> pointsIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'points',
-      ));
-    });
-  }
-
-  QueryBuilder<GoalPoints, GoalPoints, QAfterFilterCondition>
-      pointsIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'points',
-      ));
-    });
-  }
-
-  QueryBuilder<GoalPoints, GoalPoints, QAfterFilterCondition> pointsEqualTo(
-      int? value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'points',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<GoalPoints, GoalPoints, QAfterFilterCondition> pointsGreaterThan(
-    int? value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'points',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<GoalPoints, GoalPoints, QAfterFilterCondition> pointsLessThan(
-    int? value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'points',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<GoalPoints, GoalPoints, QAfterFilterCondition> pointsBetween(
-    int? lower,
-    int? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'points',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
-    });
-  }
-}
-
-extension GoalPointsQueryObject
-    on QueryBuilder<GoalPoints, GoalPoints, QFilterCondition> {}

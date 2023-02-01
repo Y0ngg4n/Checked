@@ -20,3 +20,11 @@ class Goal {
   @override
   int get hashCode => id.hashCode^name.hashCode;
 }
+
+@collection
+class GoalPoints {
+  Id id = Isar.autoIncrement;
+  final goal = IsarLink<Goal>();
+  int? points;
+
+}

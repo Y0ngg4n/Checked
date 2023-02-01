@@ -1,5 +1,6 @@
 import 'package:checked/collections/goal.dart';
 import 'package:checked/collections/task.dart';
+import 'package:checked/collections/task_history.dart';
 import 'package:checked/utils/date_time_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -23,13 +24,11 @@ const List<Color> gradientColors = [
 enum AlarmType { before, dateTime, atStartDate, atDeadline }
 
 class TaskEditor extends StatefulWidget {
-  Function refresh;
   Task? task;
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
 
   TaskEditor({
     Key? key,
-    required this.refresh,
     required this.flutterLocalNotificationsPlugin,
     this.task,
   }) : super(key: key);
@@ -39,7 +38,7 @@ class TaskEditor extends StatefulWidget {
 }
 
 class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
-  Isar? goalIsar;
+  Isar? isar;
   final _formKey = GlobalKey<FormState>();
   final maxStepsPrioritySlider = 5;
   String name = "";
@@ -49,8 +48,8 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
   int priority = 1;
   double prioritySlider = 0;
   List<SubTask> subTasks = [];
-  List<Goal?> goals = [];
   List<GoalPoints> goalPoints = [];
+  List<Goal?> goals = [];
   DateTime? estimation;
   DateTime? spent;
   DateTime? recurringStartDate;
@@ -69,13 +68,25 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
   TextEditingController recurringIntervalCounterController =
       TextEditingController();
   Map<RecurringInterval, String> intervalNameMapping = {};
+  late Task task;
 
   @override
   void initState() {
     super.initState();
     tz.initializeTimeZones();
-
+    task = Task(
+        name: name,
+        description: description,
+        dateTimeReminders: dateTimeReminders,
+        created: DateTime.now(),
+        edited: DateTime.now(),
+        deadline: deadline,
+        priority: priority,
+        recurringDays: RecurringDays(),
+        subTasks: subTasks);
     if (widget.task != null) {
+      print("Widget Tasks" + widget.task!.goals.length.toString());
+      task = widget.task!;
       name = widget.task!.name;
       description = widget.task!.description;
       deadline = widget.task!.deadline;
@@ -93,22 +104,13 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
       recurringNext = widget.task!.recurringNext;
       goalPoints = widget.task!.goals.toList(growable: true);
     }
+
     WidgetsFlutterBinding.ensureInitialized()
         .scheduleFrameCallback((timeStamp) async {
-      Isar? isar = Isar.getInstance("Goal");
-      isar ??= await Isar.open([GoalSchema], name: "Goal");
-      setState(() {
-        goalIsar = isar;
-      });
-      if (widget.task != null) {
-        List<Goal?> response = await isar.goals.getAll(widget.task!.goals
-            .map((e) => e.id!)
-            .toList()
-            .toList(growable: true));
-        setState(() {
-          goals = response;
-        });
-      }
+      isar = Isar.getInstance();
+      isar ??= await Isar.open(
+          [TaskSchema, TaskHistorySchema, GoalSchema, GoalPointsSchema]);
+      if (widget.task != null) {}
     });
     nameController.text = name;
     descriptionController.text = description;
@@ -170,6 +172,7 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
   _save() async {
     await _createNotifications();
     await _saveIsar();
+    Navigator.pop(context);
   }
 
   // TODO: Update Notifications when checked
@@ -256,17 +259,6 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
   }
 
   _saveIsar() async {
-    Task task = widget.task ??
-        Task(
-            name: name,
-            description: description,
-            dateTimeReminders: dateTimeReminders,
-            created: DateTime.now(),
-            edited: DateTime.now(),
-            deadline: deadline,
-            priority: priority,
-            recurringDays: RecurringDays(),
-            subTasks: subTasks);
     recurringNext =
         calculateNextDate(recurringNext ?? recurringStartDate, interval, false);
     task
@@ -285,13 +277,14 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
       ..recurringIntervalCount = recurringIntervalCount
       ..startDateReminder = startDateReminder
       ..deadlineDateReminder = deadlineDateReminder
-      ..interval = interval
-      ..goals = goalPoints;
-    Isar? isar = Isar.getInstance("Task");
-    isar ??= await Isar.open([TaskSchema], name: "Task");
-    await isar.writeTxn(() async {
-      await isar!.tasks.put(task); // insert & update
-      widget.refresh();
+      ..interval = interval;
+    await isar!.writeTxn(() async {
+      for (GoalPoints goalPoints in goalPoints) {
+        await isar!.goalPoints.put(goalPoints);
+        print("For goals");
+      }
+      await isar!.tasks.put(task);
+      await task.goals.save();
     });
   }
 
@@ -355,7 +348,7 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
   }
 
   void _askGoal() async {
-    List<Goal> availableGoals = await goalIsar!.goals.where().findAll();
+    List<Goal> availableGoals = await isar!.goals.where().findAll();
     List<Goal> selectedValues = [];
     await SelectDialog.showModal<Goal>(
       context,
@@ -378,14 +371,17 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
     List<Widget> goalWidgets = [];
     for (Goal? goal in goals) {
       if (goal != null) {
-        GoalPoints? goalPoint =
-            goalPoints.firstWhereOrNull((element) => element!.id == goal.id);
+        GoalPoints? goalPoint = task.goals
+            .firstWhereOrNull((element) => element.goal.value == goal);
         goalWidgets.add(Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Text(goal.name, style: Theme.of(context).textTheme.bodyLarge,),
+              child: Text(
+                goal.name,
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(8.0),
@@ -405,12 +401,16 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
                   if (value != null && int.tryParse(value) != null) {
                     setState(() {
                       int points = int.parse(value);
-                      if (goalPoint == null) {
+                      GoalPoints? searchedGoalPoints =
+                          goalPoints.firstWhereOrNull(
+                              (element) => element.goal.value == goal);
+                      if (searchedGoalPoints == null) {
                         goalPoints.add(GoalPoints()
-                          ..id = goal.id
+                          ..goal.value = goal
                           ..points = points);
+                        print("Add goals" + goalPoints.length.toString());
                       } else {
-                        goalPoint.points = points;
+                        searchedGoalPoints.points = points;
                       }
                     });
                   }
@@ -896,7 +896,6 @@ class _TaskEditorState extends State<TaskEditor> with DateTimeUtils {
                     if (_formKey.currentState!.validate()) {
                       _formKey.currentState!.save();
                       _save();
-                      Navigator.pop(context);
                     }
                   },
                   child: const Icon(

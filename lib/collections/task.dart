@@ -1,3 +1,4 @@
+import 'package:checked/collections/goal.dart';
 import 'package:isar/isar.dart';
 
 part 'task.g.dart';
@@ -19,7 +20,7 @@ class Task {
   DateTime? recurringNext;
   RecurringDays recurringDays;
   int recurringIntervalCount = 1;
-  List<GoalPoints> goals = [];
+  final goals = IsarLinks<GoalPoints>();
   @enumerated
   RecurringInterval interval = RecurringInterval.week;
   DateTime? recurringStartDate;
@@ -90,8 +91,3 @@ class DeadlineDateReminder {
   int? notificationId;
 }
 
-@embedded
-class GoalPoints {
-  int? id;
-  int? points;
-}

@@ -1,19 +1,21 @@
 import 'package:checked/collections/goal.dart';
+import 'package:checked/collections/task.dart';
+import 'package:checked/collections/task_history.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:isar/isar.dart';
 
 class GoalEditor extends StatefulWidget {
-  Function refresh;
   Goal? goal;
 
-  GoalEditor({Key? key, required this.refresh, this.goal}) : super(key: key);
+  GoalEditor({Key? key, this.goal}) : super(key: key);
 
   @override
   State<GoalEditor> createState() => _GoalEditorState();
 }
 
 class _GoalEditorState extends State<GoalEditor> {
+  Isar? isar;
   final _formKey = GlobalKey<FormState>();
   String name = "";
   int dailyPoints = 0;
@@ -43,12 +45,12 @@ class _GoalEditorState extends State<GoalEditor> {
         ..weeklyPoints = weeklyPoints
         ..monthlyPoints = monthlyPoints;
     }
-    Isar? isar = Isar.getInstance("Goal");
-    isar ??= await Isar.open([GoalSchema], name: "Goal");
-    await isar.writeTxn(() async {
+    isar = Isar.getInstance();
+    isar ??= await Isar.open([TaskSchema, TaskHistorySchema, GoalSchema, GoalPointsSchema]);
+    await isar!.writeTxn(() async {
       await isar!.goals.put(goal);
-      widget.refresh();
     });
+    Navigator.pop(context);
   }
 
   @override
@@ -118,7 +120,6 @@ class _GoalEditorState extends State<GoalEditor> {
                         if (_formKey.currentState!.validate()) {
                           _formKey.currentState!.save();
                           _save();
-                          Navigator.pop(context);
                         }
                       },
                       child: const Icon(
